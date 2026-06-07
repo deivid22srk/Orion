@@ -34,6 +34,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.winlator.cmod.R
 import com.winlator.cmod.XServerDisplayActivity
 import com.winlator.cmod.contentdialog.ContentDialog
@@ -65,6 +68,9 @@ class TaskManagerDialog(private val activity: XServerDisplayActivity) : Dialog(a
         setCancelable(false)
 
         val composeView = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(activity)
+            setViewTreeViewModelStoreOwner(activity)
+            setViewTreeSavedStateRegistryOwner(activity)
             setContent {
                 OrionTheme {
                     TaskManagerView()
@@ -75,6 +81,9 @@ class TaskManagerDialog(private val activity: XServerDisplayActivity) : Dialog(a
 
         // Configura dimensões do Dialog
         window?.let { w ->
+            w.decorView.setViewTreeLifecycleOwner(activity)
+            w.decorView.setViewTreeViewModelStoreOwner(activity)
+            w.decorView.setViewTreeSavedStateRegistryOwner(activity)
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             w.setGravity(Gravity.CENTER)
             w.setBackgroundDrawableResource(android.R.color.transparent)
