@@ -1,3 +1,6 @@
+// Copyright (c) 2017-2026 The Khronos Group Inc.
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
 #pragma once
 
 #ifdef XR_USE_PLATFORM_ANDROID

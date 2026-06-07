@@ -1,3 +1,9 @@
+// Copyright (c) 2020-2026 The Khronos Group Inc.
+// Copyright (c) 2020-2021, Collabora, Ltd.
+//
+// SPDX-License-Identifier:  Apache-2.0 OR MIT
+//
+// Initial Author: Rylie Pavlik <rylie.pavlik@collabora.com>
 
 #pragma once
 #ifdef __ANDROID__

@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2024, The Khronos Group Inc.
+# Copyright (c) 2017-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -51,6 +51,8 @@ add_library(
     loader_logger.hpp
     loader_logger_recorders.cpp
     loader_logger_recorders.hpp
+    loader_properties.cpp
+    loader_properties.hpp
     manifest_file.cpp
     manifest_file.hpp
     runtime_interface.cpp
@@ -63,6 +65,7 @@ add_library(
     ${LOADER_EXTERNAL_GEN_FILES}
 )
 set_target_properties(openxr_loader PROPERTIES FOLDER ${LOADER_FOLDER})
+add_sanitizers(openxr_loader)
 
 target_include_directories(
     openxr_loader
@@ -94,6 +97,7 @@ openxr_add_filesystem_utils(openxr_loader)
 set_target_properties(
     openxr_loader PROPERTIES DEBUG_POSTFIX "${OPENXR_DEBUG_POSTFIX}"
 )
+
 # TODO remove once we get rid of add_definitions()
 if(Vulkan_FOUND)
     target_include_directories(openxr_loader PRIVATE ${Vulkan_INCLUDE_DIR})
@@ -107,13 +111,15 @@ else()
         target_compile_definitions(openxr_loader PRIVATE JSON_USE_EXCEPTION=0)
     endif()
 
-    target_sources(
-        openxr_loader
-        PRIVATE
-            "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_reader.cpp"
-            "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_value.cpp"
-            "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_writer.cpp"
+    set(jsoncpp_sources
+        "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_reader.cpp"
+        "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_value.cpp"
+        "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/src/lib_json/json_writer.cpp"
     )
+
+    set_source_files_properties(${jsoncpp_sources} PROPERTIES SKIP_LINTING ON)
+
+    target_sources(openxr_loader PRIVATE ${jsoncpp_sources})
     target_include_directories(
         openxr_loader
         PRIVATE "${PROJECT_SOURCE_DIR}/src/external/jsoncpp/include"
@@ -125,9 +131,13 @@ else()
 endif()
 
 if(LOADER_EXTERNAL_GEN_DEPENDS)
-    set_source_files_properties(
-        ${LOADER_EXTERNAL_GEN_DEPENDS} PROPERTIES GENERATED TRUE
+    # cmake-format: off
+    set_source_files_properties(${LOADER_EXTERNAL_GEN_DEPENDS}
+        PROPERTIES
+            GENERATED TRUE
+            SKIP_LINTING ON
     )
+    # cmake-format: on
 endif()
 
 if(NOT BUILD_LOADER_WITH_EXCEPTION_HANDLING)
@@ -151,6 +161,8 @@ if(ANDROID)
     target_link_libraries(
         openxr_loader PRIVATE ${ANDROID_LOG_LIBRARY} ${ANDROID_LIBRARY}
     )
+    # Force 16KB page sizes for Android 15+ compatibility.
+    target_link_options(openxr_loader PRIVATE "-Wl,-z,max-page-size=16384")
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(FALLBACK_CONFIG_DIRS
@@ -292,9 +304,6 @@ if(ANDROID)
         CONFIGURE_DEPENDS
         ${JNIWRAPPER_ROOT}/wrap/*.cpp
     )
-    set_target_properties(
-        openxr_loader PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED TRUE
-    )
     target_sources(
         openxr_loader
         PRIVATE
@@ -305,10 +314,6 @@ if(ANDROID)
     )
     target_include_directories(
         openxr_loader PRIVATE ${JNIPP_ROOT} ${JNIWRAPPER_ROOT}
-    )
-
-    target_compile_definitions(
-        openxr_loader PRIVATE XR_KHR_LOADER_INIT_SUPPORT=1
     )
 endif()
 
@@ -329,8 +334,8 @@ if(DYNAMIC_LOADER AND BUILD_CONFORMANCE_CLI)
         TARGET openxr_loader
         POST_BUILD
         COMMAND
-            ${CMAKE_COMMAND} -E copy $<TARGET_FILE:openxr_loader>
-            $<TARGET_PROPERTY:conformance_cli,BINARY_DIR>
+            ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:openxr_loader>"
+            "$<TARGET_PROPERTY:conformance_cli,BINARY_DIR>"
     )
 endif()
 
@@ -377,6 +382,67 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
+include(CheckCCompilerFlag)
+
+if(NOT ANDROID)
+    check_c_compiler_flag(-Wmissing-prototypes HAVE_MISSING_PROTOTYPES)
+    # https://gitlab.khronos.org/openxr/openxr/-/merge_requests/4020 highlighted that
+    # teams often have stricter compiler settings for the openxr_loader
+    if(HAVE_MISSING_PROTOTYPES)
+        # https://gitlab.khronos.org/openxr/openxr/-/merge_requests/4120
+        # Limit check to clang until this is supported more widely.
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            target_compile_options(
+                openxr_loader PRIVATE -Werror=missing-prototypes
+            )
+        else()
+            target_compile_options(
+                openxr_loader
+                PRIVATE $<IF:$<COMPILE_LANGUAGE:C>,-Werror=missing-prototypes,>
+            )
+        endif()
+    endif()
+endif()
+
+check_c_compiler_flag(-Wundef HAVE_UNDEF)
+check_c_compiler_flag(-Wtautological-type-limit-compare HAVE_TAUTOLOGICAL_TYPE_LIMIT)
+check_c_compiler_flag(-Wmissing-braces HAVE_MISSING_BRACES)
+check_c_compiler_flag(-Wunreachable-code HAVE_UNREACHABLE_CODE)
+check_c_compiler_flag(-Wc++20-extensions HAVE_CPP20_EXTENSIONS)
+# check_c_compiler_flag(-Wswitch-default HAVE_SWITCH_DEFAULT)
+# check_c_compiler_flag(-Wswitch-enum HAVE_SWITCH_ENUM)
+
+if(HAVE_UNDEF)
+    target_compile_options(
+            openxr_loader PRIVATE -Werror=undef)
+endif()
+if(HAVE_TAUTOLOGICAL_TYPE_LIMIT)
+    target_compile_options(
+            openxr_loader PRIVATE -Werror=tautological-type-limit-compare)
+endif()
+if(HAVE_MISSING_BRACES)
+    target_compile_options(
+            openxr_loader PRIVATE -Werror=missing-braces)
+endif()
+if(HAVE_UNREACHABLE_CODE)
+    target_compile_options(
+            openxr_loader PRIVATE -Werror=unreachable-code)
+endif()
+if(HAVE_CPP20_EXTENSIONS)
+    target_compile_options(
+            openxr_loader PRIVATE -Werror=c++20-extensions)
+endif()
+# json_value.cpp fails this right now
+# if(HAVE_SWITCH_DEFAULT)
+#     target_compile_options(
+#             openxr_loader PRIVATE -Werror=switch-default)
+# endif()
+# json_reader.cpp fails this right now
+# if(HAVE_SWITCH_ENUM)
+#     target_compile_options(
+#             openxr_loader PRIVATE -Werror=switch-enum)
+# endif()
+
 # We will never actually install here, but it's easier to set something than block all install code.
 if(ANDROID AND NOT INSTALL_TO_ARCHITECTURE_PREFIXES)
     set(CMAKE_INSTALL_BINDIR bin)
@@ -415,7 +481,7 @@ install(
 )
 
 include(CMakePackageConfigHelpers)
-set(INCLUDE_INSTALL_DIR include/)
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR}/)
 configure_package_config_file(
     OpenXRConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/OpenXRConfig.cmake
     INSTALL_DESTINATION ${TARGET_DESTINATION}
@@ -436,6 +502,7 @@ install(
 if(WIN32
    AND NOT MINGW
    AND DYNAMIC_LOADER
+   AND INSTALL_SYMBOLS
 )
     install(
         FILES $<TARGET_PDB_FILE:openxr_loader>
@@ -472,6 +539,32 @@ if(WIN32 AND INSTALL_TO_ARCHITECTURE_PREFIXES)
         COMPONENT CMakeConfigs
     )
 elseif(ANDROID AND INSTALL_TO_ARCHITECTURE_PREFIXES)
+    # Root directory CMake config and version files, in case you extract the .aar
+    set(TARGET_SUBDIR cmake/openxr)
+    set(WARNING "This is a generated file - do not edit!")
+    set(FN OpenXRConfig)
+    configure_file(
+        ../cmake/metaconfig_android.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/metaconfig.cmake @ONLY
+    )
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/metaconfig.cmake
+        DESTINATION .
+        RENAME OpenXRConfig.cmake
+        COMPONENT CMakeConfigs
+    )
+
+    set(FN OpenXRConfigVersion)
+    configure_file(
+        ../cmake/metaconfig_android.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/metaconfigversion.cmake @ONLY
+    )
+    install(
+        FILES ${CMAKE_CURRENT_BINARY_DIR}/metaconfigversion.cmake
+        DESTINATION .
+        RENAME OpenXRConfigVersion.cmake
+        COMPONENT CMakeConfigs
+    )
 
     # json data files for a "prefab" AAR
     configure_file(abi.json "${CMAKE_CURRENT_BINARY_DIR}/abi.json" @ONLY)
@@ -488,6 +581,13 @@ elseif(ANDROID AND INSTALL_TO_ARCHITECTURE_PREFIXES)
         COMPONENT Prefab
     )
 
+    install(
+        FILES module.json
+        DESTINATION ${PREFAB_LOADER_MODULE_INSTALL_DIR}
+        COMPONENT Prefab
+    )
+
+    # Manifest to merge with the consuming app
     configure_file(
         AndroidManifest.xml.in
         "${CMAKE_CURRENT_BINARY_DIR}/AndroidManifest.xml"
@@ -497,10 +597,13 @@ elseif(ANDROID AND INSTALL_TO_ARCHITECTURE_PREFIXES)
         DESTINATION .
         COMPONENT Prefab
     )
+
+    # Copy of library for older build systems. Gets de-duplicated in AAR so no size change.
     install(
-        FILES module.json
-        DESTINATION ${PREFAB_LOADER_MODULE_INSTALL_DIR}
-        COMPONENT Prefab
+        TARGETS openxr_loader
+        RUNTIME DESTINATION "jni/${ANDROID_ABI}/" COMPONENT Loader
+        LIBRARY DESTINATION "jni/${ANDROID_ABI}/" COMPONENT Loader
+        ARCHIVE DESTINATION "jni/${ANDROID_ABI}/" COMPONENT Loader
     )
 
     # These get used directly by build-aar.sh

@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2024, The Khronos Group Inc.
+# Copyright (c) 2019-2026 The Khronos Group Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 parameters:
@@ -26,7 +26,7 @@ jobs:
           presentationBackend: wayland
     pool:
       vmImage: "ubuntu-latest"
-    container: khronosgroup/docker-images:openxr-sdk.20240412@sha256:e477137f8558565ac9173de8713a3e44d6d564ba042db9a20ff560eb4bfdeccc
+    container: khronosgroup/docker-images:openxr-sdk.20240924@sha256:5e6a6f5d72dc4a20d5c33f12550fdd9b6a1206e94d6cf1382e0697a5726c424c
 
     steps:
       # First build as debug

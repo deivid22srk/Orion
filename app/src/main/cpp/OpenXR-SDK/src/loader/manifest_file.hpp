@@ -1,3 +1,11 @@
+// Copyright (c) 2017-2026 The Khronos Group Inc.
+// Copyright (c) 2017 Valve Corporation
+// Copyright (c) 2017 LunarG, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+//
+// Initial Author: Mark Young <marky@lunarg.com>
+//
 
 #pragma once
 
@@ -31,8 +39,11 @@ struct ExtensionListing {
     uint32_t extension_version;
 };
 
+// ManifestFile class -
+// Base class responsible for finding and parsing manifest files.
 class ManifestFile {
    public:
+    // Non-copyable
     ManifestFile(const ManifestFile &) = delete;
     ManifestFile &operator=(const ManifestFile &) = delete;
 
@@ -40,7 +51,7 @@ class ManifestFile {
     const std::string &Filename() const { return _filename; }
     const std::string &LibraryPath() const { return _library_path; }
     void GetInstanceExtensionProperties(std::vector<XrExtensionProperties> &props);
-    const std::string &GetFunctionName(const std::string &func_name) const;
+    std::string GetFunctionName(const std::string &func_name) const;
 
    protected:
     ManifestFile(ManifestFileType type, const std::string &filename, const std::string &library_path);
@@ -55,8 +66,11 @@ class ManifestFile {
     std::unordered_map<std::string, std::string> _functions_renamed;
 };
 
+// RuntimeManifestFile class -
+// Responsible for finding and parsing Runtime-specific manifest files.
 class RuntimeManifestFile : public ManifestFile {
    public:
+    // Factory method
     static XrResult FindManifestFiles(const std::string &openxr_command,
                                       std::vector<std::unique_ptr<RuntimeManifestFile>> &manifest_files);
 
@@ -69,8 +83,11 @@ class RuntimeManifestFile : public ManifestFile {
 
 using LibraryLocator = bool (*)(const std::string &json_filename, const std::string &library_path, std::string &out_combined_path);
 
+// ApiLayerManifestFile class -
+// Responsible for finding and parsing API Layer-specific manifest files.
 class ApiLayerManifestFile : public ManifestFile {
    public:
+    // Factory method
     static XrResult FindManifestFiles(const std::string &openxr_command, ManifestFileType type,
                                       std::vector<std::unique_ptr<ApiLayerManifestFile>> &manifest_files);
 
@@ -86,15 +103,17 @@ class ApiLayerManifestFile : public ManifestFile {
                               LibraryLocator locate_library, std::vector<std::unique_ptr<ApiLayerManifestFile>> &manifest_files);
     static void CreateIfValid(ManifestFileType type, const std::string &filename,
                               std::vector<std::unique_ptr<ApiLayerManifestFile>> &manifest_files);
+    /// @return false if we could not find the library.
     static bool LocateLibraryRelativeToJson(const std::string &json_filename, const std::string &library_path,
                                             std::string &out_combined_path);
 
-#if defined(XR_KHR_LOADER_INIT_SUPPORT) && defined(XR_USE_PLATFORM_ANDROID)
+    // actually only implemented if defined(XR_USE_PLATFORM_ANDROID) && defined(XR_HAS_REQUIRED_PLATFORM_LOADER_INIT_STRUCT)
+#if defined(XR_USE_PLATFORM_ANDROID)
     static bool LocateLibraryInAssets(const std::string &json_filename, const std::string &library_path,
                                       std::string &out_combined_path);
     static void AddManifestFilesAndroid(const std::string &openxr_command, ManifestFileType type,
                                         std::vector<std::unique_ptr<ApiLayerManifestFile>> &manifest_files);
-#endif  // defined(XR_USE_PLATFORM_ANDROID) && defined(XR_KHR_LOADER_INIT_SUPPORT)
+#endif  // defined(XR_USE_PLATFORM_ANDROID)
 
     JsonVersion _api_version;
     std::string _layer_name;

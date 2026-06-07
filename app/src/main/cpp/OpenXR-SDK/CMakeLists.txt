@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2024, The Khronos Group Inc.
+# Copyright (c) 2017-2026 The Khronos Group Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -21,7 +21,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(OPENXR)
 
-find_package(PythonInterp 3)
+find_package(Python3 COMPONENTS Interpreter)
 include(CTest)
 
 # Enable IDE GUI folders.  "Helper targets" that don't have interesting source code should set their FOLDER property to this
@@ -44,8 +44,16 @@ option(
     OFF
 )
 
-if(BUILD_FORCE_GENERATION AND NOT PYTHON_EXECUTABLE)
+if(BUILD_FORCE_GENERATION AND NOT Python3_EXECUTABLE)
     message(FATAL_ERROR "BUILD_FORCE_GENERATION requires Python")
+endif()
+
+if(MSVC)
+    option(
+        INSTALL_SYMBOLS
+        "Install the .pdb debug symbols, if applicable, when installing binaries"
+        ON
+    )
 endif()
 
 string(TOUPPER "${CMAKE_GENERATOR_PLATFORM}" CMAKE_GENERATOR_PLATFORM_UPPER)
@@ -120,7 +128,7 @@ elseif(ANDROID AND INSTALL_TO_ARCHITECTURE_PREFIXES)
         )
     endif()
 
-elseif(NOT ANDROID)
+else()
     include(GNUInstallDirs)
 endif()
 
@@ -176,16 +184,25 @@ if(BASH_COMMAND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/specification/Makefile")
 endif()
 
 if(ANDROID AND INSTALL_TO_ARCHITECTURE_PREFIXES)
+    set(LICENSE_DEST META-INF)
+else()
+    set(LICENSE_DEST share/doc/openxr)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
     install(
         FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
-        DESTINATION META-INF
+        DESTINATION ${LICENSE_DEST}
         COMPONENT License
     )
-
-else()
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/../../../../LICENSES/Apache-2.0.txt")
+    # Building from a sources jar, where we omit that single file
+    # to avoid confusion regarding the combination of licenses in the sources.
+    # But for consistency, we will put it in the binaries.
     install(
-        FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
-        DESTINATION share/doc/openxr
+        FILES "${CMAKE_SOURCE_DIR}/../../../../LICENSES/Apache-2.0.txt"
+        RENAME LICENSE
+        DESTINATION ${LICENSE_DEST}
         COMPONENT License
     )
 endif()

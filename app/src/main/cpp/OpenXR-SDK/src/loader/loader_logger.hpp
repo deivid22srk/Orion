@@ -1,3 +1,11 @@
+// Copyright (c) 2017-2026 The Khronos Group Inc.
+// Copyright (c) 2017-2019 Valve Corporation
+// Copyright (c) 2017-2019 LunarG, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+//
+// Initial Author: Mark Young <marky@lunarg.com>
+//
 
 #pragma once
 
@@ -16,6 +24,9 @@
 #include "hex_and_handles.h"
 #include "object_info.h"
 
+// Use internal versions of flags similar to XR_EXT_debug_utils so that
+// we're not tightly coupled to that extension.  This way, if the extension
+// changes or gets replaced, we can be flexible in the loader.
 #define XR_LOADER_LOG_MESSAGE_SEVERITY_VERBOSE_BIT 0x00000001
 #define XR_LOADER_LOG_MESSAGE_SEVERITY_INFO_BIT 0x00000010
 #define XR_LOADER_LOG_MESSAGE_SEVERITY_WARNING_BIT 0x00000100
@@ -53,27 +64,26 @@ enum XrLoaderLogType {
 class LoaderLogRecorder {
    public:
     LoaderLogRecorder(XrLoaderLogType type, void* user_data, XrLoaderLogMessageSeverityFlags message_severities,
-                      XrLoaderLogMessageTypeFlags message_types) {
-        _active = false;
-        _user_data = user_data;
-        _type = type;
-        _unique_id = 0;
-        _message_severities = message_severities;
-        _message_types = message_types;
-    }
+                      XrLoaderLogMessageTypeFlags message_types)
+        : _active(false),
+          _type(type),
+          _unique_id(0),
+          _user_data(user_data),
+          _message_severities(message_severities),
+          _message_types(message_types) {}
     virtual ~LoaderLogRecorder() = default;
 
-    XrLoaderLogType Type() { return _type; }
+    XrLoaderLogType Type() const { return _type; }
 
-    uint64_t UniqueId() { return _unique_id; }
+    uint64_t UniqueId() const { return _unique_id; }
 
-    XrLoaderLogMessageSeverityFlags MessageSeverities() { return _message_severities; }
+    XrLoaderLogMessageSeverityFlags MessageSeverities() const { return _message_severities; }
 
-    XrLoaderLogMessageTypeFlags MessageTypes() { return _message_types; }
+    XrLoaderLogMessageTypeFlags MessageTypes() const { return _message_types; }
 
     virtual void Start() { _active = true; }
 
-    bool IsPaused() { return _active; }
+    bool IsPaused() const { return _active; }
 
     virtual void Pause() { _active = false; }
 
@@ -84,6 +94,7 @@ class LoaderLogRecorder {
     virtual bool LogMessage(XrLoaderLogMessageSeverityFlagBits message_severity, XrLoaderLogMessageTypeFlags message_type,
                             const XrLoaderLogMessengerCallbackData* callback_data) = 0;
 
+    // Extension-specific logging functions - defaults to do nothing.
     virtual bool LogDebugUtilsMessage(XrDebugUtilsMessageSeverityFlagsEXT message_severity,
                                       XrDebugUtilsMessageTypeFlagsEXT message_type,
                                       const XrDebugUtilsMessengerCallbackDataEXT* callback_data);
@@ -110,6 +121,7 @@ class LoaderLogger {
     void AddLogRecorderForXrInstance(XrInstance instance, std::unique_ptr<LoaderLogRecorder>&& recorder);
     void RemoveLogRecordersForXrInstance(XrInstance instance);
 
+    //! Called from LoaderXrTermSetDebugUtilsObjectNameEXT - an empty name means remove
     void AddObjectName(uint64_t object_handle, XrObjectType object_type, const std::string& object_name);
     void BeginLabelRegion(XrSession session, const XrDebugUtilsLabelEXT* label_info);
     void EndLabelRegion(XrSession session);
@@ -150,9 +162,11 @@ class LoaderLogger {
                                         vuid, command_name, message, objects);
     }
 
+    // Extension-specific logging functions
     bool LogDebugUtilsMessage(XrDebugUtilsMessageSeverityFlagsEXT message_severity, XrDebugUtilsMessageTypeFlagsEXT message_type,
                               const XrDebugUtilsMessengerCallbackDataEXT* callback_data);
 
+    // Non-copyable
     LoaderLogger(const LoaderLogger&) = delete;
     LoaderLogger& operator=(const LoaderLogger&) = delete;
 
@@ -161,13 +175,16 @@ class LoaderLogger {
 
     std::shared_timed_mutex _mutex;
 
+    // List of *all* available recorder objects (including created specifically for an Instance)
     std::vector<std::unique_ptr<LoaderLogRecorder>> _recorders;
 
+    // List of recorder objects only created specifically for an XrInstance
     std::unordered_map<XrInstance, std::unordered_set<uint64_t>> _recordersByInstance;
 
     DebugUtilsData data_;
 };
 
+// Utility functions for converting to/from XR_EXT_debug_utils values
 XrLoaderLogMessageSeverityFlags DebugUtilsSeveritiesToLoaderLogMessageSeverities(
     XrDebugUtilsMessageSeverityFlagsEXT utils_severities);
 XrDebugUtilsMessageSeverityFlagsEXT LoaderLogMessageSeveritiesToDebugUtilsMessageSeverities(

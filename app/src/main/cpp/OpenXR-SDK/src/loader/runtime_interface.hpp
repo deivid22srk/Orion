@@ -1,3 +1,11 @@
+// Copyright (c) 2017-2026 The Khronos Group Inc.
+// Copyright (c) 2017-2019 Valve Corporation
+// Copyright (c) 2017-2019 LunarG, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+//
+// Initial Author: Mark Young <marky@lunarg.com>
+//
 
 #pragma once
 
@@ -16,19 +24,21 @@ class Value;
 }
 
 class RuntimeManifestFile;
-struct XrGeneratedDispatchTable;
+struct XrGeneratedDispatchTableCore;
 
 class RuntimeInterface {
    public:
     virtual ~RuntimeInterface();
 
+    // Helper functions for loading and unloading the runtime (but only when necessary)
     static XrResult LoadRuntime(const std::string& openxr_command);
     static void UnloadRuntime(const std::string& openxr_command);
     static RuntimeInterface& GetRuntime() { return *(GetInstance().get()); }
     static XrResult GetInstanceProcAddr(XrInstance instance, const char* name, PFN_xrVoidFunction* function);
 
-    static const XrGeneratedDispatchTable* GetDispatchTable(XrInstance instance);
-    static const XrGeneratedDispatchTable* GetDebugUtilsMessengerDispatchTable(XrDebugUtilsMessengerEXT messenger);
+    // Get the direct dispatch table to this runtime, without API layers or loader terminators.
+    static const XrGeneratedDispatchTableCore* GetDispatchTable(XrInstance instance);
+    static const XrGeneratedDispatchTableCore* GetDebugUtilsMessengerDispatchTable(XrDebugUtilsMessengerEXT messenger);
 
     void GetInstanceExtensionProperties(std::vector<XrExtensionProperties>& extension_properties);
     bool SupportsExtension(const std::string& extension_name);
@@ -37,8 +47,10 @@ class RuntimeInterface {
     bool TrackDebugMessenger(XrInstance instance, XrDebugUtilsMessengerEXT messenger);
     void ForgetDebugMessenger(XrDebugUtilsMessengerEXT messenger);
 
+    // No default construction
     RuntimeInterface() = delete;
 
+    // Non-copyable
     RuntimeInterface(const RuntimeInterface&) = delete;
     RuntimeInterface& operator=(const RuntimeInterface&) = delete;
 
@@ -54,7 +66,7 @@ class RuntimeInterface {
 
     LoaderPlatformLibraryHandle _runtime_library;
     PFN_xrGetInstanceProcAddr _get_instance_proc_addr;
-    std::unordered_map<XrInstance, std::unique_ptr<XrGeneratedDispatchTable>> _dispatch_table_map;
+    std::unordered_map<XrInstance, std::unique_ptr<XrGeneratedDispatchTableCore>> _dispatch_table_map;
     std::mutex _dispatch_table_mutex;
     std::unordered_map<XrDebugUtilsMessengerEXT, XrInstance> _messenger_to_instance_map;
     std::mutex _messenger_to_instance_mutex;
