@@ -17,15 +17,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +41,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -45,6 +49,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -52,15 +57,19 @@ import androidx.compose.ui.unit.dp
 import com.winlator.cmod.box64.Box64Preset
 import com.winlator.cmod.container.Container
 import com.winlator.cmod.container.ContainerManager
+import com.winlator.cmod.contents.AdrenotoolsManager
 import com.winlator.cmod.contents.ContentProfile
 import com.winlator.cmod.contents.ContentsManager
 import com.winlator.cmod.core.DefaultVersion
+import com.winlator.cmod.core.FileUtils
+import com.winlator.cmod.core.GPUInformation
 import com.winlator.cmod.core.WineInfo
 import com.winlator.cmod.core.WineThemeManager
 import com.winlator.cmod.fexcore.FEXCorePreset
 import com.winlator.cmod.midi.MidiManager
 import com.winlator.cmod.winhandler.WinHandler
 import com.winlator.cmod.xserver.XKeycode
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
@@ -123,6 +132,49 @@ fun ContainerDetailScreen(
     var startupSelection by remember { mutableStateOf(container?.getStartupSelection()?.toInt() ?: Container.STARTUP_SELECTION_ESSENTIAL.toInt()) }
     var desktopTheme by remember { mutableStateOf(container?.getDesktopTheme() ?: WineThemeManager.DEFAULT_DESKTOP_THEME) }
     var midiSoundFont by remember { mutableStateOf(container?.getMIDISoundFont() ?: "") }
+
+    // Dialog flags
+    var showDXVKDialog by remember { mutableStateOf(false) }
+    var showWineD3DDialog by remember { mutableStateOf(false) }
+    var showGraphicsDriverDialog by remember { mutableStateOf(false) }
+
+    // DXVK Versions
+    val dxvkVersions = remember(isArm64EC) {
+        val list = mutableListOf<String>()
+        val originalItems = context.resources.getStringArray(com.winlator.cmod.R.array.dxvk_version_entries)
+        list.addAll(originalItems)
+        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_DXVK)) {
+            if (profile.remoteUrl != null) continue
+            val entryName = ContentsManager.getEntryName(profile)
+            val firstDashIndex = entryName.indexOf('-')
+            if (firstDashIndex != -1) {
+                list.add(entryName.substring(firstDashIndex + 1))
+            }
+        }
+        list.filter { version ->
+            isArm64EC || !version.lowercase().contains("arm64ec")
+        }
+    }
+
+    // VKD3D Versions
+    val vkd3dVersions = remember(isArm64EC) {
+        val list = mutableListOf<String>()
+        val originalItems = context.resources.getStringArray(com.winlator.cmod.R.array.vkd3d_version_entries)
+        for (version in originalItems) {
+            if (isArm64EC || !version.lowercase().contains("arm64ec")) {
+                list.add(version)
+            }
+        }
+        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_VKD3D)) {
+            if (profile.remoteUrl != null) continue
+            val displayName = profile.verName
+            val versionCode = profile.verCode
+            if (isArm64EC || !displayName.lowercase().contains("arm64ec")) {
+                list.add("$displayName-$versionCode")
+            }
+        }
+        list
+    }
 
     // CPU Affinity Cores Setup
     val numCores = remember { Runtime.getRuntime().availableProcessors().coerceAtLeast(8) }
@@ -194,6 +246,38 @@ fun ContainerDetailScreen(
     val drivesList = remember {
         val parsed = parseDrives(initialDrives)
         mutableStateListOf<Pair<String, String>>().apply { addAll(parsed) }
+    }
+
+    // Graphics Driver Versions
+    val graphicsDriverVersions = remember {
+        val list = mutableListOf<String>()
+        val defaultVersions = context.resources.getStringArray(com.winlator.cmod.R.array.wrapper_graphics_driver_version_entries)
+        for (version in defaultVersions) {
+            if (GPUInformation.isDriverSupported(version, context)) {
+                list.add(version)
+            }
+        }
+        val adrenotoolsManager = AdrenotoolsManager(context)
+        list.addAll(adrenotoolsManager.enumarateInstalledDrivers())
+        if (list.isEmpty()) {
+            list.add("System")
+        }
+        list
+    }
+
+    // GPU names list
+    val gpuNames = remember {
+        val list = mutableListOf<String>()
+        list.add("Device")
+        try {
+            val gpuNameList = FileUtils.readString(context, "gpu_cards.json")
+            val jarray = JSONArray(gpuNameList)
+            for (i in 0 until jarray.length()) {
+                val jobj = jarray.getJSONObject(i)
+                list.add(jobj.getString("name"))
+            }
+        } catch (e: Exception) {}
+        list
     }
 
     // XR Controls Mapping Configuration
@@ -383,7 +467,7 @@ fun ContainerDetailScreen(
             }
         }
 
-        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         // 5. Tab Contents
         Box(
@@ -417,19 +501,59 @@ fun ContainerDetailScreen(
                             onOptionSelected = { screenSize = it }
                         )
 
-                        M3DropdownSelector(
-                            label = "Driver Gráfico (GPU)",
-                            options = listOf("wrapper", "turnip", "virgl", "llvmpipe"),
-                            selectedOption = graphicsDriver,
-                            onOptionSelected = { graphicsDriver = it }
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                M3DropdownSelector(
+                                    label = "Driver Gráfico (GPU)",
+                                    options = listOf("wrapper", "turnip", "virgl", "llvmpipe"),
+                                    selectedOption = graphicsDriver,
+                                    onOptionSelected = { graphicsDriver = it }
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledIconButton(
+                                onClick = { showGraphicsDriverDialog = true },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Configurar Driver Gráfico"
+                                )
+                            }
+                        }
 
-                        M3DropdownSelector(
-                            label = "DX Wrapper",
-                            options = listOf("dxvk+vkd3d", "wined3d", "virgl-wrapper"),
-                            selectedOption = dxwrapper,
-                            onOptionSelected = { dxwrapper = it }
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                M3DropdownSelector(
+                                    label = "DX Wrapper",
+                                    options = listOf("dxvk+vkd3d", "wined3d", "virgl-wrapper"),
+                                    selectedOption = dxwrapper,
+                                    onOptionSelected = { dxwrapper = it }
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            FilledIconButton(
+                                onClick = {
+                                    if (dxwrapper.contains("dxvk")) {
+                                        showDXVKDialog = true
+                                    } else {
+                                        showWineD3DDialog = true
+                                    }
+                                },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Configurar DX Wrapper"
+                                )
+                            }
+                        }
 
                         M3DropdownSelector(
                             label = "Driver de Áudio",
@@ -568,7 +692,7 @@ fun ContainerDetailScreen(
                             )
                         }
 
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         OutlinedCard(
                             colors = CardDefaults.outlinedCardColors(
@@ -800,7 +924,7 @@ fun ContainerDetailScreen(
                             }
                         )
 
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         Text(
                             text = "Mapeamento dos Botões VR/XR",
@@ -838,6 +962,385 @@ fun ContainerDetailScreen(
                 }
             }
         }
+    }
+
+    // Advanced Dialog for DXVK configuration
+    if (showDXVKDialog) {
+        val dxConfig = remember { parseDxwrapperConfig(dxwrapperConfig).toMutableMap() }
+        var selectedVersion by remember { mutableStateOf(dxConfig["version"] ?: DefaultVersion.DXVK) }
+        var selectedVkd3dVersion by remember { mutableStateOf(dxConfig["vkd3dVersion"] ?: "None") }
+        var selectedFramerate by remember { mutableStateOf(dxConfig["framerate"] ?: "0") }
+        var selectedVkd3dLevel by remember { mutableStateOf(dxConfig["vkd3dLevel"] ?: "12_1") }
+        var selectedDdrawrapper by remember { mutableStateOf(dxConfig["ddrawrapper"] ?: "none") }
+        var asyncEnabled by remember { mutableStateOf(dxConfig["async"] == "1") }
+        var asyncCacheEnabled by remember { mutableStateOf(dxConfig["asyncCache"] == "1") }
+
+        val filteredDxvkVersions = remember(selectedVkd3dVersion, dxvkVersions) {
+            if (selectedVkd3dVersion != "None") {
+                dxvkVersions.filter { ver ->
+                    val major = tryGetMajor(ver)
+                    major == null || major >= 2
+                }
+            } else {
+                dxvkVersions
+            }
+        }
+
+        LaunchedEffect(filteredDxvkVersions) {
+            if (selectedVersion !in filteredDxvkVersions) {
+                val major = tryGetMajor(selectedVersion)
+                if (major == null || major < 2) {
+                    selectedVersion = DefaultVersion.DXVK
+                }
+            }
+        }
+
+        val selectedVersionLower = selectedVersion.lowercase()
+        val isGplAsync = selectedVersionLower.contains("gplasync")
+        val isAsync = selectedVersionLower.contains("async") && !isGplAsync
+        val showAsync = isGplAsync || isAsync
+        val showAsyncCache = isGplAsync
+
+        AlertDialog(
+            onDismissRequest = { showDXVKDialog = false },
+            title = { Text("Configuração Avançada do DXVK") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    M3DropdownSelector(
+                        label = "Versão do DXVK",
+                        options = filteredDxvkVersions,
+                        selectedOption = selectedVersion,
+                        onOptionSelected = { selectedVersion = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Versão do VKD3D",
+                        options = vkd3dVersions,
+                        selectedOption = selectedVkd3dVersion,
+                        onOptionSelected = { selectedVkd3dVersion = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Limite de FPS",
+                        options = listOf("0", "20", "30", "40", "50", "60", "70", "80", "90", "100", "120", "144"),
+                        selectedOption = selectedFramerate,
+                        onOptionSelected = { selectedFramerate = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "VKD3D Feature Level",
+                        options = listOf("12_0", "12_1", "12_2", "11_1", "11_0", "10_1", "10_0", "9_3", "9_2", "9_1"),
+                        selectedOption = selectedVkd3dLevel,
+                        onOptionSelected = { selectedVkd3dLevel = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "DirectDraw Wrapper",
+                        options = listOf("none", "cnc", "tsgrack", "ddwrapper"),
+                        selectedOption = selectedDdrawrapper,
+                        onOptionSelected = { selectedDdrawrapper = it }
+                    )
+
+                    if (showAsync) {
+                        SettingsSwitchRow(
+                            label = "Compilação Assíncrona de Shaders (Async)",
+                            checked = asyncEnabled,
+                            onCheckedChange = { asyncEnabled = it }
+                        )
+                    }
+
+                    if (showAsyncCache) {
+                        SettingsSwitchRow(
+                            label = "Cache de Shaders Assíncrono",
+                            checked = asyncCacheEnabled,
+                            onCheckedChange = { asyncCacheEnabled = it }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    dxConfig["version"] = selectedVersion
+                    dxConfig["vkd3dVersion"] = selectedVkd3dVersion
+                    dxConfig["framerate"] = selectedFramerate
+                    dxConfig["vkd3dLevel"] = selectedVkd3dLevel
+                    dxConfig["ddrawrapper"] = selectedDdrawrapper
+                    dxConfig["async"] = if (showAsync && asyncEnabled) "1" else "0"
+                    dxConfig["asyncCache"] = if (showAsyncCache && asyncCacheEnabled) "1" else "0"
+
+                    dxwrapperConfig = formatDxwrapperConfig(dxConfig)
+                    showDXVKDialog = false
+                }) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDXVKDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Advanced Dialog for WineD3D configuration
+    if (showWineD3DDialog) {
+        val w3dConfig = remember { parseDxwrapperConfig(dxwrapperConfig).toMutableMap() }
+        val wineD3DGpuNames = remember(gpuNames) { gpuNames.filter { it != "Device" } }
+
+        AlertDialog(
+            onDismissRequest = { showWineD3DDialog = false },
+            title = { Text("Configuração Avançada do WineD3D") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    var csmtEnabled by remember { mutableStateOf(w3dConfig["csmt"] == "3") }
+                    SettingsSwitchRow(
+                        label = "CSMT (Multi-threaded Command Stream)",
+                        checked = csmtEnabled,
+                        onCheckedChange = {
+                            csmtEnabled = it
+                            w3dConfig["csmt"] = if (it) "3" else "0"
+                        }
+                    )
+
+                    var strictShaderMath by remember { mutableStateOf(w3dConfig["strict_shader_math"] == "1") }
+                    SettingsSwitchRow(
+                        label = "Strict Shader Math",
+                        checked = strictShaderMath,
+                        onCheckedChange = {
+                            strictShaderMath = it
+                            w3dConfig["strict_shader_math"] = if (it) "1" else "0"
+                        }
+                    )
+
+                    var offscreenMode by remember { mutableStateOf(w3dConfig["OffscreenRenderingMode"] ?: "fbo") }
+                    M3DropdownSelector(
+                        label = "Offscreen Rendering Mode",
+                        options = listOf("fbo", "backbuffer"),
+                        selectedOption = offscreenMode,
+                        onOptionSelected = {
+                            offscreenMode = it
+                            w3dConfig["OffscreenRenderingMode"] = it
+                        }
+                    )
+
+                    var selectedGpuName by remember { mutableStateOf(w3dConfig["gpuName"] ?: "NVIDIA GeForce GTX 480") }
+                    M3DropdownSelector(
+                        label = "Nome da GPU",
+                        options = wineD3DGpuNames,
+                        selectedOption = selectedGpuName,
+                        onOptionSelected = {
+                            selectedGpuName = it
+                            w3dConfig["gpuName"] = it
+                        }
+                    )
+
+                    var selectedVram by remember { mutableStateOf(w3dConfig["videoMemorySize"] ?: "2048") }
+                    M3DropdownSelector(
+                        label = "Tamanho da Memória de Vídeo (VRAM)",
+                        options = listOf("32", "64", "128", "256", "512", "1024", "2048", "4096"),
+                        selectedOption = selectedVram,
+                        onOptionSelected = {
+                            selectedVram = it
+                            w3dConfig["videoMemorySize"] = it
+                        }
+                    )
+
+                    var selectedRenderer by remember { mutableStateOf(w3dConfig["renderer"] ?: "gl") }
+                    M3DropdownSelector(
+                        label = "Renderizador",
+                        options = listOf("gl", "vulkan", "gdi"),
+                        selectedOption = selectedRenderer,
+                        onOptionSelected = {
+                            selectedRenderer = it
+                            w3dConfig["renderer"] = it
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    dxwrapperConfig = formatDxwrapperConfig(w3dConfig)
+                    showWineD3DDialog = false
+                }) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWineD3DDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Advanced Dialog for Graphics Driver configuration
+    if (showGraphicsDriverDialog) {
+        val gdConfig = remember { parseGraphicsDriverConfig(graphicsDriverConfig).toMutableMap() }
+        var selectedVersion by remember { mutableStateOf(gdConfig["version"] ?: "System") }
+        val availableExtensions = remember(selectedVersion) {
+            GPUInformation.enumerateExtensions(selectedVersion, context) ?: emptyArray()
+        }
+        val blacklistedList = remember(selectedVersion) {
+            val bl = if (selectedVersion == (parseGraphicsDriverConfig(graphicsDriverConfig)["version"] ?: "System")) {
+                parseGraphicsDriverConfig(graphicsDriverConfig)["blacklistedExtensions"] ?: ""
+            } else {
+                ""
+            }
+            bl.split(",").filter { it.isNotEmpty() }.toMutableStateList()
+        }
+
+        var selectedVulkanVersion by remember { mutableStateOf(gdConfig["vulkanVersion"] ?: "1.3") }
+        var selectedGpuName by remember { mutableStateOf(gdConfig["gpuName"] ?: "Device") }
+        var selectedMemory by remember { mutableStateOf(gdConfig["maxDeviceMemory"] ?: "0") }
+        var selectedPresentMode by remember { mutableStateOf(gdConfig["presentMode"] ?: "mailbox") }
+        var selectedResourceType by remember { mutableStateOf(gdConfig["resourceType"] ?: "auto") }
+        var selectedBCn by remember { mutableStateOf(gdConfig["bcnEmulation"] ?: "auto") }
+        var selectedBCnType by remember { mutableStateOf(gdConfig["bcnEmulationType"] ?: "compute") }
+        var bcnEmulationCacheEnabled by remember { mutableStateOf(gdConfig["bcnEmulationCache"] == "1") }
+        var syncFrameEnabled by remember { mutableStateOf(gdConfig["syncFrame"] == "1") }
+        var disablePresentWaitEnabled by remember { mutableStateOf(gdConfig["disablePresentWait"] == "1") }
+
+        AlertDialog(
+            onDismissRequest = { showGraphicsDriverDialog = false },
+            title = { Text("Configuração Avançada do Driver Gráfico") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    M3DropdownSelector(
+                        label = "Versão do Driver",
+                        options = graphicsDriverVersions,
+                        selectedOption = selectedVersion,
+                        onOptionSelected = { selectedVersion = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Versão do Vulkan",
+                        options = listOf("1.1", "1.2", "1.3"),
+                        selectedOption = selectedVulkanVersion,
+                        onOptionSelected = { selectedVulkanVersion = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Nome da GPU Emulada",
+                        options = gpuNames,
+                        selectedOption = selectedGpuName,
+                        onOptionSelected = { selectedGpuName = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Memória de Vídeo Máxima (VRAM)",
+                        options = listOf("0 (Default)", "512 MB", "1024 MB", "2048 MB", "4096 MB", "8192 MB", "12288 MB", "16384 MB"),
+                        selectedOption = if (selectedMemory == "0") "0 (Default)" else "$selectedMemory MB",
+                        onOptionSelected = { selectedMemory = it.replace(" MB", "").replace(" (Default)", "") }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Modo de Apresentação (Vsync)",
+                        options = listOf("mailbox", "fifo", "immediate", "relaxed"),
+                        selectedOption = selectedPresentMode,
+                        onOptionSelected = { selectedPresentMode = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Tipo de Recurso",
+                        options = listOf("auto", "dmabuf", "ahb", "opaque"),
+                        selectedOption = selectedResourceType,
+                        onOptionSelected = { selectedResourceType = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Emulação de BCn",
+                        options = listOf("none", "partial", "full", "auto"),
+                        selectedOption = selectedBCn,
+                        onOptionSelected = { selectedBCn = it }
+                    )
+
+                    M3DropdownSelector(
+                        label = "Tipo de Emulação de BCn",
+                        options = listOf("software", "compute"),
+                        selectedOption = selectedBCnType,
+                        onOptionSelected = { selectedBCnType = it }
+                    )
+
+                    SettingsSwitchRow(
+                        label = "Cache de Emulação de BCn",
+                        checked = bcnEmulationCacheEnabled,
+                        onCheckedChange = { bcnEmulationCacheEnabled = it }
+                    )
+
+                    SettingsSwitchRow(
+                        label = "Forçar Sync Frame (syncFrame)",
+                        checked = syncFrameEnabled,
+                        onCheckedChange = { syncFrameEnabled = it }
+                    )
+
+                    SettingsSwitchRow(
+                        label = "Desabilitar Present Wait",
+                        checked = disablePresentWaitEnabled,
+                        onCheckedChange = { disablePresentWaitEnabled = it }
+                    )
+
+                    if (availableExtensions.isNotEmpty()) {
+                        Text("Blacklist de Extensões Vulkan", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+                        Text("Extensões marcadas serão desativadas:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        
+                        availableExtensions.forEach { ext ->
+                            val isBlacklisted = blacklistedList.contains(ext)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Checkbox(
+                                    checked = isBlacklisted,
+                                    onCheckedChange = { checked ->
+                                        if (checked) {
+                                            blacklistedList.add(ext)
+                                        } else {
+                                            blacklistedList.remove(ext)
+                                        }
+                                    }
+                                )
+                                Text(ext, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    gdConfig["version"] = selectedVersion
+                    gdConfig["vulkanVersion"] = selectedVulkanVersion
+                    gdConfig["gpuName"] = selectedGpuName
+                    gdConfig["maxDeviceMemory"] = selectedMemory
+                    gdConfig["presentMode"] = selectedPresentMode
+                    gdConfig["resourceType"] = selectedResourceType
+                    gdConfig["bcnEmulation"] = selectedBCn
+                    gdConfig["bcnEmulationType"] = selectedBCnType
+                    gdConfig["bcnEmulationCache"] = if (bcnEmulationCacheEnabled) "1" else "0"
+                    gdConfig["syncFrame"] = if (syncFrameEnabled) "1" else "0"
+                    gdConfig["disablePresentWait"] = if (disablePresentWaitEnabled) "1" else "0"
+                    gdConfig["blacklistedExtensions"] = blacklistedList.joinToString(",")
+
+                    graphicsDriverConfig = formatGraphicsDriverConfig(gdConfig)
+                    showGraphicsDriverDialog = false
+                }) {
+                    Text("Confirmar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGraphicsDriverDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
@@ -905,61 +1408,104 @@ fun M3DropdownSelector(
 }
 
 // Helper methods for parsing CPU lists
-private fun parseCpuList(cpuListStr: String?, numCores: Int): List<Boolean> {
-    val activeList = MutableList(numCores) { true } // default all active
-    if (!cpuListStr.isNullOrEmpty()) {
-        activeList.fill(false)
-        cpuListStr.split(",").forEach {
-            val idx = it.toIntOrNull()
-            if (idx != null && idx in 0 until numCores) {
-                activeList[idx] = true
-            }
+private fun parseCpuList(cpuListStr: String, numCores: Int): List<Boolean> {
+    val list = MutableList(numCores) { false }
+    if (cpuListStr.isEmpty()) return list
+    cpuListStr.split(",").forEach {
+        val core = it.toIntOrNull()
+        if (core != null && core in 0 until numCores) {
+            list[core] = true
         }
     }
-    return activeList
+    return list
 }
 
-private fun formatCpuList(cpuCoresList: List<Boolean>): String {
-    return cpuCoresList.mapIndexedNotNull { idx, active -> if (active) idx.toString() else null }.joinToString(",")
+private fun formatCpuList(cpuList: List<Boolean>): String {
+    val list = mutableListOf<Int>()
+    cpuList.forEachIndexed { index, enabled ->
+        if (enabled) {
+            list.add(index)
+        }
+    }
+    return list.joinToString(",")
 }
 
 // Helper methods for parsing wincomponents
-private fun parseWinComponents(winComponentsStr: String): Map<String, Int> {
+private fun parseWinComponents(winCompStr: String): Map<String, Int> {
     val map = mutableMapOf<String, Int>()
-    if (winComponentsStr.isNotEmpty()) {
-        winComponentsStr.split(",").forEach {
-            val parts = it.split("=")
-            if (parts.size == 2) {
-                val value = parts[1].toIntOrNull() ?: 0
-                map[parts[0]] = value
-            }
+    winCompStr.split(";").forEach {
+        val parts = it.split("=")
+        if (parts.size == 2) {
+            map[parts[0]] = parts[1].toIntOrNull() ?: 1
         }
     }
     return map
 }
 
 private fun formatWinComponents(map: Map<String, Int>): String {
-    return map.entries.joinToString(",") { "${it.key}=${it.value}" }
+    return map.entries.joinToString(";") { "${it.key}=${it.value}" }
 }
 
 // Helper methods for parsing drives
 private fun parseDrives(drivesStr: String): List<Pair<String, String>> {
     val list = mutableListOf<Pair<String, String>>()
-    var i = drivesStr.indexOf(":")
-    while (i != -1) {
-        val letter = drivesStr[i - 1].toString()
-        val nextColon = drivesStr.indexOf(":", i + 1)
-        val path = if (nextColon != -1) {
-            drivesStr.substring(i + 1, nextColon - 1)
-        } else {
-            drivesStr.substring(i + 1)
-        }
-        list.add(letter to path)
-        i = nextColon
+    val parts = drivesStr.split(":")
+    for (i in 0 until parts.size - 1 step 2) {
+        list.add(Pair(parts[i], parts[i + 1]))
     }
     return list
 }
 
 private fun formatDrives(list: List<Pair<String, String>>): String {
-    return list.joinToString("") { "${it.first}:${it.second}" }
+    return list.joinToString(":") { "${it.first}:${it.second}" }
+}
+
+// Helper methods for parsing dxwrapperConfig
+private fun parseDxwrapperConfig(configStr: String): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    val defaultVal = Container.DEFAULT_DXWRAPPERCONFIG
+    val data = if (configStr.isNotEmpty()) configStr else defaultVal
+    data.split(",").forEach {
+        val parts = it.split("=")
+        if (parts.size == 2) {
+            map[parts[0]] = parts[1]
+        }
+    }
+    return map
+}
+
+private fun formatDxwrapperConfig(map: Map<String, String>): String {
+    return map.entries.joinToString(",") { "${it.key}=${it.value}" }
+}
+
+// Helper methods for parsing graphicsDriverConfig
+private fun parseGraphicsDriverConfig(configStr: String): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    val defaultVal = Container.DEFAULT_GRAPHICSDRIVERCONFIG
+    val data = if (configStr.isNotEmpty()) configStr else defaultVal
+    data.split(";").forEach {
+        val parts = it.split("=")
+        if (parts.size == 2) {
+            map[parts[0]] = parts[1]
+        } else if (parts.size == 1 && parts[0].isNotEmpty()) {
+            map[parts[0]] = ""
+        }
+    }
+    return map
+}
+
+private fun formatGraphicsDriverConfig(map: Map<String, String>): String {
+    return map.entries.joinToString(";") { "${it.key}=${it.value}" }
+}
+
+private val SEMVER = java.util.regex.Pattern.compile("(\\d+)\\.(\\d+)(?:\\.(\\d+))?")
+private fun tryGetMajor(s: String?): Int? {
+    if (s == null) return null
+    val m = SEMVER.matcher(s)
+    if (!m.find()) return null
+    return try {
+        m.group(1).toInt()
+    } catch (e: NumberFormatException) {
+        null
+    }
 }
