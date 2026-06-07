@@ -3,21 +3,10 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.MessageDigest
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-    dependencies {
-        // Adjust Gradle plugin versions if needed
-        classpath 'com.android.tools.build:gradle:8.8.0'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0'
-    }
-
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
 
 tasks.register("downloadImageFS") {
         def assetDir = new File(project.rootDir, ["app","src","main","assets"].join(File.separator))
