@@ -13,7 +13,7 @@
         { "name": "Configurações Gerais (SettingsScreen)", "progress": 100 },
         { "name": "Perfis de Controle (InputControlsScreen)", "progress": 100 },
         { "name": "Editor de Layout de Botões Virtuais", "progress": 0 },
-        { "name": "Menu Lateral do Emulador (In-Game Overlay)", "progress": 0 }
+        { "name": "Menu Lateral do Emulador (In-Game Overlay)", "progress": 100 }
       ]
     },
     {

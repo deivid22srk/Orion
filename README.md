@@ -1,7 +1,7 @@
 # Orion - Emulador de Windows para Android
 
 ![Orion Banner](https://img.shields.io/badge/Orion_Emulator-Kotlin_%26_Compose-purple?style=for-the-badge)
-![Progresso](https://img.shields.io/badge/Progresso_Orion-91.11%25-emerald)
+![Progresso](https://img.shields.io/badge/Progresso_Orion-95.56%25-emerald)
 
 **Orion** é uma recriação moderna e extremamente eficiente do emulador **Winlator-Ludashi** (originalmente desenvolvido por StevenMXZ, que por sua vez baseia-se no Winlator clássico de BrunoDev). 
 
@@ -11,7 +11,7 @@ O foco principal deste projeto é reescrever a interface de usuário do aplicati
 
 ## 📊 Progresso da Migração
 
-**Progresso Real Orion:** [█████████░] 91.11%
+**Progresso Real Orion:** [█████████░] 95.56%
 
 > [!NOTE]
 > O progresso geral é calculado através de uma média ponderada das metas de desenvolvimento cadastradas no arquivo [progress_config.json](file:///workspaces/Tes/Orion/progress_config.json). Isso reflete o andamento real do projeto em relação à migração da UI para Compose, integração do sistema de temas e estabilização de builds.
@@ -19,7 +19,7 @@ O foco principal deste projeto é reescrever a interface de usuário do aplicati
 ### 📦 Progresso em Grandes Blocos
 
 <!-- BLOCKS_PROGRESS_START -->
-* **Migração da Interface (UI) para Jetpack Compose (Peso: 40%):** [███████░░░] 77.78%
+* **Migração da Interface (UI) para Jetpack Compose (Peso: 40%):** [████████░░] 88.89%
 * **Design System & Material You 3 (Peso: 20%):** [██████████] 100.0%
 * **Integração do Núcleo de Emulação (Peso: 25%):** [██████████] 100.0%
 * **Infraestrutura & Automações (Peso: 15%):** [██████████] 100.0%
