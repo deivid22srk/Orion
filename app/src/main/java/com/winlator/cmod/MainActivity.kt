@@ -9,7 +9,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
@@ -22,7 +22,16 @@ import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+
+    companion object {
+        @JvmField val CONTAINER_PATTERN_COMPRESSION_LEVEL: Byte = 9
+        @JvmField val PERMISSION_WRITE_EXTERNAL_STORAGE_REQUEST_CODE: Byte = 1
+        @JvmField val OPEN_FILE_REQUEST_CODE: Byte = 2
+        @JvmField val EDIT_INPUT_CONTROLS_REQUEST_CODE: Byte = 3
+        @JvmField val OPEN_DIRECTORY_REQUEST_CODE: Byte = 4
+        @JvmField val OPEN_IMAGE_REQUEST_CODE: Byte = 5
+    }
 
     private lateinit var containerManager: ContainerManager
     private lateinit var sharedPreferences: SharedPreferences
