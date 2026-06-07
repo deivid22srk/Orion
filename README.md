@@ -1,7 +1,7 @@
 # Orion - Emulador de Windows para Android
 
 ![Orion Banner](https://img.shields.io/badge/Orion_Emulator-Kotlin_%26_Compose-purple?style=for-the-badge)
-![Progresso](https://img.shields.io/badge/Progresso_Geral_Kotlin-4.44%25-blue)
+![Progresso](https://img.shields.io/badge/Progresso_Orion-91.11%25-emerald)
 
 **Orion** é uma recriação moderna e extremamente eficiente do emulador **Winlator-Ludashi** (originalmente desenvolvido por StevenMXZ). O foco principal deste projeto é reescrever a interface de usuário do aplicativo usando **Kotlin**, **Jetpack Compose** e a especificação de design **Material You 3** (Material 3 com cores dinâmicas), mantendo o núcleo robusto de emulação nativa em C/C++ (JNI).
 
@@ -9,10 +9,10 @@
 
 ## 📊 Progresso da Migração
 
-**Progresso da Conversão Geral:** [░░░░░░░░░░] 4.44%
+**Progresso da Conversão Geral:** [█████████░] 91.11%
 
 > [!NOTE]
-> O progresso geral é calculado com base na contagem de arquivos Kotlin vs. Java. O núcleo nativo e o backend de emulação (cerca de 230 arquivos) permanecem em Java para assegurar compatibilidade absoluta com as chamadas JNI de baixo nível no C++, enquanto a interface gráfica (UI) foi migrada 100% para Compose.
+> O progresso geral é calculado através de uma média ponderada das metas de desenvolvimento cadastradas no arquivo [progress_config.json](file:///workspaces/Tes/Orion/progress_config.json). Isso reflete o andamento real do projeto em relação à migração da UI para Compose, integração do sistema de temas e estabilização de builds.
 
 ### Status dos Módulos da UI
 

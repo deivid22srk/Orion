@@ -1,0 +1,48 @@
+{
+  "project_name": "Orion",
+  "modules": [
+    {
+      "name": "Migração da Interface (UI) para Jetpack Compose",
+      "weight": 40,
+      "items": [
+        { "name": "Tela Principal (MainActivity)", "progress": 100 },
+        { "name": "Lista de Containers (ContainersScreen)", "progress": 100 },
+        { "name": "Editor de Containers (ContainerDetailScreen)", "progress": 100 },
+        { "name": "Gerenciador de Arquivos (FileManagerScreen)", "progress": 100 },
+        { "name": "Atalhos de Jogos (ShortcutsScreen)", "progress": 100 },
+        { "name": "Configurações Gerais (SettingsScreen)", "progress": 100 },
+        { "name": "Perfis de Controle (InputControlsScreen)", "progress": 100 },
+        { "name": "Editor de Layout de Botões Virtuais", "progress": 0 },
+        { "name": "Menu Lateral do Emulador (In-Game Overlay)", "progress": 0 }
+      ]
+    },
+    {
+      "name": "Design System & Material You 3",
+      "weight": 20,
+      "items": [
+        { "name": "Paleta de Cores do Material 3 (Orion Theme)", "progress": 100 },
+        { "name": "Suporte a Cores Dinâmicas (Material You)", "progress": 100 },
+        { "name": "Responsividade (Visualização em Grid / Lista)", "progress": 100 },
+        { "name": "Tipografia Dinâmica e Acessibilidade", "progress": 100 }
+      ]
+    },
+    {
+      "name": "Integração do Núcleo de Emulação",
+      "weight": 25,
+      "items": [
+        { "name": "Lançamento de Containers Nativos (XServer)", "progress": 100 },
+        { "name": "Execução direta de executáveis (.exe)", "progress": 100 },
+        { "name": "Chamada direta por Atalho (.desktop)", "progress": 100 }
+      ]
+    },
+    {
+      "name": "Infraestrutura & Automações",
+      "weight": 15,
+      "items": [
+        { "name": "Workflow GitHub Actions para compilação do APK", "progress": 100 },
+        { "name": "Script dinâmico de progresso no README", "progress": 100 },
+        { "name": "Integração estável de Submódulos nativos C++", "progress": 100 }
+      ]
+    }
+  ]
+}
