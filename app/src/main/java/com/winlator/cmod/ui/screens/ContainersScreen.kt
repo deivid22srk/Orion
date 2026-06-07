@@ -104,8 +104,9 @@ fun ContainersScreen(
                             onStart = { onStartContainer(container) },
                             onEdit = { selectedContainerForEdit = container },
                             onDelete = {
-                                containerManager.removeContainer(container)
-                                containers.remove(container)
+                                containerManager.removeContainerAsync(container) {
+                                    containers.remove(container)
+                                }
                             }
                         )
                     }

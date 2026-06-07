@@ -51,7 +51,7 @@ fun ContainerDetailScreen(
     var name by remember { mutableStateOf(container?.name ?: "Container Novo") }
     var screenSize by remember { mutableStateOf(container?.screenSize ?: Container.DEFAULT_SCREEN_SIZE) }
     var graphicsDriver by remember { mutableStateOf(container?.graphicsDriver ?: Container.DEFAULT_GRAPHICS_DRIVER) }
-    var dxwrapper by remember { mutableStateOf(container?.dxwrapper ?: Container.DEFAULT_DXWRAPPER) }
+    var dxwrapper by remember { mutableStateOf(container?.getDXWrapper() ?: Container.DEFAULT_DXWRAPPER) }
     var wineVersion by remember { mutableStateOf(container?.wineVersion ?: "9.0") }
     var envVars by remember { mutableStateOf(container?.envVars ?: Container.DEFAULT_ENV_VARS) }
     
@@ -107,13 +107,13 @@ fun ContainerDetailScreen(
                         }
                     } else {
                         // Update
-                        container.name = name
-                        container.screenSize = screenSize
-                        container.graphicsDriver = graphicsDriver
-                        container.dxwrapper = dxwrapper
-                        container.wineVersion = wineVersion
-                        container.envVars = envVars
-                        container.saveData(data)
+                        container.setName(name)
+                        container.setScreenSize(screenSize)
+                        container.setGraphicsDriver(graphicsDriver)
+                        container.setDXWrapper(dxwrapper)
+                        container.setWineVersion(wineVersion)
+                        container.setEnvVars(envVars)
+                        container.saveData()
                         onSave()
                     }
                 }) {

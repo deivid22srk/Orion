@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.winlator.cmod.inputcontrols.ControlsProfile
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,8 +44,8 @@ import com.winlator.cmod.inputcontrols.InputControlsManager
 fun InputControlsScreen(containerManager: ContainerManager) {
     val inputControlsManager = remember { InputControlsManager(containerManager.context) }
     val profiles = remember {
-        mutableStateListOf<InputControlsManager.Profile>().apply {
-            addAll(inputControlsManager.profiles)
+        mutableStateListOf<ControlsProfile>().apply {
+            addAll(inputControlsManager.getProfiles())
         }
     }
     
@@ -141,7 +142,7 @@ fun InputControlsScreen(containerManager: ContainerManager) {
 
 @Composable
 fun ProfileCard(
-    profile: InputControlsManager.Profile,
+    profile: ControlsProfile,
     onDelete: () -> Unit
 ) {
     Card(
@@ -162,7 +163,7 @@ fun ProfileCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = profile.name,
+                    text = profile.getName(),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
