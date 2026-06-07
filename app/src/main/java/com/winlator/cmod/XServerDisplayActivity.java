@@ -147,7 +147,7 @@ public class XServerDisplayActivity extends AppCompatActivity {
     private WineInfo wineInfo;
     private final EnvVars envVars = new EnvVars();
     private boolean firstTimeBoot = false;
-    private SharedPreferences preferences;
+    public SharedPreferences preferences;
     private OnExtractFileListener onExtractFileListener;
     private WinHandler winHandler;
     private WineRequestHandler wineRequestHandler;
@@ -951,6 +951,26 @@ if (enableLogs) {
 
     private void setupLeftSidebar() {
         com.winlator.cmod.ui.SidebarComposeHelper.init(findViewById(R.id.LeftSidebarCompose), this);
+    }
+
+    public void showVibrationDialog() {
+        if (winHandler == null) return;
+
+        int maxControllers = winHandler.getMaxControllers();
+        boolean[] checkedItems = new boolean[maxControllers];
+        String[] items = new String[maxControllers];
+
+        for (int i = 0; i < maxControllers; i++) {
+            items[i] = getString(R.string.vibration_slot, i + 1);
+            checkedItems[i] = winHandler.isVibrationEnabledForSlot(i);
+        }
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.vibration)
+                .setMultiChoiceItems(items, checkedItems, (dialog, which, isChecked) ->
+                        winHandler.setVibrationEnabledForSlot(which, isChecked))
+                .setPositiveButton(R.string.ok, null)
+                .show();
     }
 
     private ActivityResultLauncher<Intent> controlsEditorActivityResultLauncher = registerForActivityResult(

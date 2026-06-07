@@ -32,6 +32,7 @@ import com.winlator.cmod.core.ProcessHelper
 import com.winlator.cmod.widget.WinlatorHUD
 import com.winlator.cmod.winhandler.TaskManagerDialog
 import com.winlator.cmod.ui.theme.OrionTheme
+import com.winlator.cmod.renderer.VulkanRenderer
 
 object SidebarComposeHelper {
     @JvmStatic
@@ -88,12 +89,12 @@ fun SidebarView(activity: XServerDisplayActivity) {
 
     var fsrEnabled by remember {
         mutableStateOf(
-            initialEffectId == com.winlator.cmod.widget.VulkanRenderer.EFFECT_FSR ||
-            initialEffectId == com.winlator.cmod.widget.VulkanRenderer.EFFECT_DLS
+            initialEffectId == VulkanRenderer.EFFECT_FSR ||
+            initialEffectId == VulkanRenderer.EFFECT_DLS
         )
     }
 
-    val upscalerValues = listOf(com.winlator.cmod.widget.VulkanRenderer.EFFECT_FSR, com.winlator.cmod.widget.VulkanRenderer.EFFECT_DLS)
+    val upscalerValues = listOf(VulkanRenderer.EFFECT_FSR, VulkanRenderer.EFFECT_DLS)
     val upscalerLabels = listOf("CAS", "DLS")
     var selectedUpscalerIndex by remember {
         val idx = upscalerValues.indexOf(initialEffectId)
@@ -101,10 +102,10 @@ fun SidebarView(activity: XServerDisplayActivity) {
     }
 
     val colorValues = listOf(
-        com.winlator.cmod.widget.VulkanRenderer.EFFECT_NONE,
-        com.winlator.cmod.widget.VulkanRenderer.EFFECT_CRT,
-        com.winlator.cmod.widget.VulkanRenderer.EFFECT_HDR,
-        com.winlator.cmod.widget.VulkanRenderer.EFFECT_NATURAL
+        VulkanRenderer.EFFECT_NONE,
+        VulkanRenderer.EFFECT_CRT,
+        VulkanRenderer.EFFECT_HDR,
+        VulkanRenderer.EFFECT_NATURAL
     )
     val colorLabels = listOf("None", "CRT", "HDR", "Natural")
     var selectedColorIndex by remember {
@@ -119,12 +120,12 @@ fun SidebarView(activity: XServerDisplayActivity) {
         val r = activity.xServerView?.renderer
         if (r != null) {
             val selectedColorEffect = colorValues[selectedColorIndex]
-            val effectId = if (selectedColorEffect != com.winlator.cmod.widget.VulkanRenderer.EFFECT_NONE) {
+            val effectId = if (selectedColorEffect != VulkanRenderer.EFFECT_NONE) {
                 selectedColorEffect
             } else if (fsrEnabled) {
                 upscalerValues[selectedUpscalerIndex]
             } else {
-                com.winlator.cmod.widget.VulkanRenderer.EFFECT_NONE
+                VulkanRenderer.EFFECT_NONE
             }
             r.setFpsLimit(fpsLimit)
             r.setEffect(effectId, sharpness)
