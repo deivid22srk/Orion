@@ -41,6 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.winlator.cmod.container.Container
 import com.winlator.cmod.container.ContainerManager
 
@@ -50,9 +55,25 @@ fun ContainersScreen(
     containerManager: ContainerManager,
     onStartContainer: (Container) -> Unit
 ) {
-    val containers = remember { mutableStateListOf<Container>().apply { addAll(containerManager.containers) } }
+    val context = LocalContext.current
+    val containers = remember { mutableStateListOf<Container>() }
     var selectedContainerForEdit by remember { mutableStateOf<Container?>(null) }
     var showCreateScreen by remember { mutableStateOf(false) }
+    var isCheckingContainers by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isCheckingContainers = true
+        withContext(Dispatchers.IO) {
+            containerManager.loadContainers()
+            if (containerManager.containers.isEmpty() && com.winlator.cmod.xenvironment.ImageFs.find(context).isValid) {
+                containerManager.createDefaultMicroContainer()
+                containerManager.loadContainers()
+            }
+        }
+        containers.clear()
+        containers.addAll(containerManager.containers)
+        isCheckingContainers = false
+    }
 
     if (showCreateScreen) {
         ContainerDetailScreen(
@@ -80,7 +101,21 @@ fun ContainersScreen(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            if (containers.isEmpty()) {
+            if (isCheckingContainers) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Criando micro-container padrão...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            } else if (containers.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

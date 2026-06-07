@@ -150,15 +150,43 @@ public class Container {
 
     public void setGraphicsDriverConfig(String graphicsDriverConfig) { this.graphicsDriverConfig = graphicsDriverConfig; }
 
-    public boolean isRendererNative() { return rendererNative; }
+    public boolean isRendererNative() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getBoolean("global_container_renderer_native", rendererNative);
+        }
+        return rendererNative;
+    }
     public void setRendererNative(boolean v) { this.rendererNative = v; }
-    public String getRendererPresentMode() { return rendererPresentMode; }
+    public String getRendererPresentMode() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_renderer_present_mode", rendererPresentMode);
+        }
+        return rendererPresentMode;
+    }
     public void setRendererPresentMode(String v) { this.rendererPresentMode = v != null ? v : "fifo"; }
-    public String getRendererDriverId() { return rendererDriverId; }
+    public String getRendererDriverId() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_renderer_driver_id", rendererDriverId);
+        }
+        return rendererDriverId;
+    }
     public void setRendererDriverId(String v) { this.rendererDriverId = v != null ? v : ""; }
     public int getRendererFilterMode() { return rendererFilterMode; }
     public void setRendererFilterMode(int v) { this.rendererFilterMode = v; }
-    public int getRendererRefreshRateLimit() { return rendererRefreshRateLimit; }
+    public int getRendererRefreshRateLimit() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            try {
+                return Integer.parseInt(prefs.getString("global_container_renderer_refresh_rate_limit", String.valueOf(rendererRefreshRateLimit)));
+            } catch (NumberFormatException e) {
+                return prefs.getInt("global_container_renderer_refresh_rate_limit", rendererRefreshRateLimit);
+            }
+        }
+        return rendererRefreshRateLimit;
+    }
     public void setRendererRefreshRateLimit(int v) { this.rendererRefreshRateLimit = v > 0 ? v : 0; }
     public boolean getRendererSwapRB() { return rendererSwapRB; }
     public void setRendererSwapRB(boolean v) { this.rendererSwapRB = v; }
@@ -196,6 +224,10 @@ public class Container {
     }
 
     public String getWinComponents() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_wincomponents", wincomponents);
+        }
         return wincomponents;
     }
 
@@ -204,6 +236,10 @@ public class Container {
     }
 
     public String getDrives() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_drives", drives);
+        }
         return drives;
     }
 
@@ -235,7 +271,13 @@ public class Container {
         this.controllerMapping = controllerMapping;
     }
 
-    public boolean isFullscreenStretched() { return fullscreenStretched; }
+    public boolean isFullscreenStretched() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getBoolean("global_container_fullscreen_stretched", fullscreenStretched);
+        }
+        return fullscreenStretched;
+    }
 
     public boolean isShowFPS() {
         return showFPS;
@@ -248,6 +290,14 @@ public class Container {
     }
 
     public byte getStartupSelection() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            try {
+                return (byte) Integer.parseInt(prefs.getString("global_container_startup_selection", String.valueOf(startupSelection)));
+            } catch (NumberFormatException e) {
+                return (byte) prefs.getInt("global_container_startup_selection", startupSelection);
+            }
+        }
         return startupSelection;
     }
 
@@ -326,7 +376,11 @@ public class Container {
     }
 
     public String getEmulator() {
-        return this.emulator;
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_emulator", emulator != null ? emulator : DEFAULT_EMULATOR);
+        }
+        return emulator;
     }
 
     public File getRootDir() {
@@ -394,6 +448,10 @@ public class Container {
     }
 
     public String getDesktopTheme() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_desktop_theme", desktopTheme);
+        }
         return desktopTheme;
     }
 

@@ -52,7 +52,7 @@ public class ContainerManager {
         return containers;
     }
 
-    private void loadContainers() {
+    public void loadContainers() {
         containers.clear();
         maxContainerId = 0;
 
