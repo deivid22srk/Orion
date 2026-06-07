@@ -123,20 +123,20 @@ import cn.sherlock.com.sun.media.sound.SF2Soundbank;
 public class XServerDisplayActivity extends AppCompatActivity {
     public static String NOTIFICATION_CHANNEL_ID = "Winlator";
     public static int NOTIFICATION_ID = -1;
-    private XServerView xServerView;
+    public XServerView xServerView;
     private InputControlsView inputControlsView;
-    private TouchpadView touchpadView;
+    public TouchpadView touchpadView;
     private XEnvironment environment;
-    private DrawerLayout drawerLayout;
+    public DrawerLayout drawerLayout;
     private ContainerManager containerManager;
     protected Container container;
-    private XServer xServer;
+    public XServer xServer;
     private InputControlsManager inputControlsManager;
     private ImageFs imageFs;
-    private WinlatorHUD frameRating = null;
-    private HudDataSource hudDataSource = null;
+    public WinlatorHUD frameRating = null;
+    public HudDataSource hudDataSource = null;
     private Runnable editInputControlsCallback;
-    private Shortcut shortcut;
+    public Shortcut shortcut;
     private String graphicsDriver = Container.DEFAULT_GRAPHICS_DRIVER;
     private HashMap<String, String> graphicsDriverConfig;
     private String audioDriver = Container.DEFAULT_AUDIO_DRIVER;
@@ -152,8 +152,8 @@ public class XServerDisplayActivity extends AppCompatActivity {
     private WinHandler winHandler;
     private WineRequestHandler wineRequestHandler;
     private float globalCursorSpeed = 1.0f;
-    private MagnifierView magnifierView;
-    private DebugDialog debugDialog;
+    public MagnifierView magnifierView;
+    public DebugDialog debugDialog;
     private short taskAffinityMask = 0;
     private short taskAffinityMaskWoW64 = 0;
     private int frameRatingWindowId = -1;
@@ -166,9 +166,9 @@ public class XServerDisplayActivity extends AppCompatActivity {
     private String vkbasaltConfig = "";
     PreloaderDialog preloaderDialog = null;
     private Runnable configChangedCallback = null;
-    private boolean isPaused = false;
-    private boolean isRelativeMouseMovement = false;
-    private boolean isMouseDisabled = false;
+    public boolean isPaused = false;
+    public boolean isRelativeMouseMovement = false;
+    public boolean isMouseDisabled = false;
     private Handler handler;
     private Handler timeoutHandler = new Handler(Looper.getMainLooper());
     private Runnable hideControlsRunnable;
@@ -178,14 +178,14 @@ public class XServerDisplayActivity extends AppCompatActivity {
 
     private CheckBox cbFps, cbGpu, cbCpuRam, cbBattTemp, cbGraph, cbRenderer, cbRam;
 
-    private static final int[] NATIVE_FPS_VALUES = { 0, 30, 45, 60, 90, 120 };
+    public static final int[] NATIVE_FPS_VALUES = { 0, 30, 45, 60, 90, 120 };
     private Spinner spNativeFPS;
     private static final int[] VK_PRESENT_MODE_VALUES = { 2, 0, 1, 3 };
-    private static final int[] EFFECT_UPSCALER_VALUES = {
+    public static final int[] EFFECT_UPSCALER_VALUES = {
         VulkanRenderer.EFFECT_FSR,
         VulkanRenderer.EFFECT_DLS
     };
-    private static final int[] EFFECT_COLOR_VALUES = {
+    public static final int[] EFFECT_COLOR_VALUES = {
         VulkanRenderer.EFFECT_NONE,
         VulkanRenderer.EFFECT_CRT,
         VulkanRenderer.EFFECT_HDR,
@@ -616,7 +616,7 @@ if (enableLogs) {
         }
         ProcessHelper.pauseAllWineProcesses();
     }
-    private void exit() {
+    public void exit() {
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
         preloaderDialog.showOnUiThread(R.string.shutdown);
         handler.postDelayed(new Runnable() {
@@ -949,389 +949,8 @@ if (enableLogs) {
         AppUtils.observeSoftKeyboardVisibility(drawerLayout, renderer::setScreenOffsetYRelativeToCursor);
     }
 
-private void setupLeftSidebar() {
-        findViewById(R.id.BTItemFPS).setOnClickListener(v -> toggleSubMenu(findViewById(R.id.LLSubFPS)));
-        findViewById(R.id.BTItemMouse).setOnClickListener(v -> toggleSubMenu(findViewById(R.id.LLSubMouse)));
-        findViewById(R.id.BTItemGraphics).setOnClickListener(v -> toggleSubMenu(findViewById(R.id.LLSubGraphics)));
-        findViewById(R.id.BTItemScreen).setOnClickListener(v -> toggleSubMenu(findViewById(R.id.LLSubScreen)));
-
-        findViewById(R.id.BTItemInput).setOnClickListener(v -> toggleSubMenu(findViewById(R.id.LLSubInput)));
-
-        findViewById(R.id.BTSubInputControls).setOnClickListener(v -> {
-            showInputControlsDialog();
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTSubVibration).setOnClickListener(v -> {
-            showVibrationDialog();
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTItemPause).setOnClickListener(v -> {
-            isPaused = !isPaused;
-            if (isPaused) ProcessHelper.pauseAllWineProcesses();
-            else ProcessHelper.resumeAllWineProcesses();
-            ((TextView)findViewById(R.id.TVPause)).setText(isPaused ? "Resume" : "Pause / Resume");
-        });
-
-        findViewById(R.id.BTItemPipMode).setOnClickListener(v -> {
-            enterPictureInPictureMode();
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTItemToggleFullscreen).setOnClickListener(v -> {
-            xServerView.getRenderer().toggleFullscreen();
-            touchpadView.toggleFullscreen();
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTItemMagnifier).setOnClickListener(v -> {
-            if (magnifierView != null) {
-                if (magnifierView.getVisibility() == View.VISIBLE) magnifierView.setVisibility(View.GONE);
-                else magnifierView.setVisibility(View.VISIBLE);
-            }
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTItemTaskManager).setOnClickListener(v -> {
-            new TaskManagerDialog(this).show();
-            drawerLayout.closeDrawers();
-        });
-
-        findViewById(R.id.BTItemExit).setOnClickListener(v -> {
-            drawerLayout.closeDrawers();
-            exit();
-        });
-
-        findViewById(R.id.BTSubKeyboard).setOnClickListener(v -> {
-            AppUtils.showKeyboard(this);
-            drawerLayout.closeDrawers();
-        });
-        
-        Switch swRelativeMouse = findViewById(R.id.SWRelativeMouse);
-        if (swRelativeMouse != null) {
-            swRelativeMouse.setOnCheckedChangeListener((cb, checked) -> {
-                isRelativeMouseMovement = checked;
-                xServer.setRelativeMouseMovement(isRelativeMouseMovement);
-            });
-        }
-
-        Switch swDisableMouse = findViewById(R.id.SWDisableMouse);
-        if (swDisableMouse != null) {
-            swDisableMouse.setOnCheckedChangeListener((cb, checked) -> {
-                isMouseDisabled = checked;
-                touchpadView.setMouseEnabled(!isMouseDisabled);
-            });
-        } 
-
-        setupGraphicsSidebar(); 
-    }
-
-    private void showVibrationDialog() {
-        if (winHandler == null) return;
-
-        int maxControllers = winHandler.getMaxControllers();
-        boolean[] checkedItems = new boolean[maxControllers];
-        String[] items = new String[maxControllers];
-
-        for (int i = 0; i < maxControllers; i++) {
-            items[i] = getString(R.string.vibration_slot, i + 1);
-            checkedItems[i] = winHandler.isVibrationEnabledForSlot(i);
-        }
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.vibration)
-                .setMultiChoiceItems(items, checkedItems, (dialog, which, isChecked) ->
-                        winHandler.setVibrationEnabledForSlot(which, isChecked))
-                .setPositiveButton(R.string.ok, null)
-                .show();
-    }
-    
-    private void toggleSubMenu(View subMenu) {
-        if (subMenu.getVisibility() == View.VISIBLE) subMenu.setVisibility(View.GONE);
-        else subMenu.setVisibility(View.VISIBLE);
-    }
-
-    private void setupGraphicsSidebar() {
-        spNativeFPS = findViewById(R.id.SPNativeFPS);
-        swEnableFSR = findViewById(R.id.SWEnableFSR);
-        spUpscalerMode = findViewById(R.id.SPUpscalerMode);
-        spColorMode = findViewById(R.id.SPColorMode);
-        sbSharpness = findViewById(R.id.SBSharpness);
-        btSaveGraphicsPreset = findViewById(R.id.BTSaveGraphicsPreset);
-        llStandardOptions = findViewById(R.id.LLStandardOptions);
-        llFrameGenOptions = findViewById(R.id.LLFrameGenOptions);
-
-        swHudMaster = findViewById(R.id.SWHudMaster);
-        sbHudScale = findViewById(R.id.SBHudScale);
-        sbHudAlpha = findViewById(R.id.SBHudAlpha);
-        cbFps = findViewById(R.id.CBHudFps);
-        cbGpu = findViewById(R.id.CBHudGpu);
-        cbCpuRam = findViewById(R.id.CBHudCpuRam);
-        cbBattTemp = findViewById(R.id.CBHudBattTemp);
-        cbGraph = findViewById(R.id.CBHudGraph);
-        cbRenderer = findViewById(R.id.CBHudRenderer);
-        cbRam = findViewById(R.id.CBHudRam);
-
-        VulkanRenderer renderer = xServerView != null ? xServerView.getRenderer() : null;
-        boolean isNative = renderer != null && renderer.isNativeMode();
-
-
-
-        int accentColor = ContextCompat.getColor(this, R.color.colorAccent);
-
-        if (spNativeFPS != null) setupSpinner(spNativeFPS, java.util.Arrays.asList("Unlimited", "30 FPS", "45 FPS", "60 FPS", "90 FPS", "120 FPS"), accentColor);
-        if (spUpscalerMode != null) setupSpinner(spUpscalerMode, java.util.Arrays.asList("CAS", "DLS"), accentColor);
-        if (spColorMode != null) setupSpinner(spColorMode, java.util.Arrays.asList("None", "CRT", "HDR", "Natural"), accentColor);
-        if (llStandardOptions != null) llStandardOptions.setVisibility(View.VISIBLE);
-        if (llFrameGenOptions != null) llFrameGenOptions.setVisibility(View.GONE);
-        
-        boolean hasShortcutGraphicsPreset = restoreCurrentSidebarState();
-
-        if (frameRating != null) {
-            swHudMaster.setChecked(frameRating.getVisibility() == View.VISIBLE);
-            frameRating.syncCheckboxes(cbFps, cbGpu, cbCpuRam, cbBattTemp, cbGraph, cbRenderer);
-            android.content.SharedPreferences hudPrefs = getSharedPreferences("winlator_hud", MODE_PRIVATE);
-            if (sbHudScale != null) {
-                float scale = hudPrefs.getFloat("hud_scale", 1f);
-                sbHudScale.setValue((int)((scale - 0.5f) * 50f));
-            }
-            if (sbHudAlpha != null) {
-                int alpha = hudPrefs.getInt("hud_alpha_int", 100);
-                sbHudAlpha.setValue(alpha);
-            }
-        } else {
-            if (swHudMaster != null) swHudMaster.setEnabled(false);
-        }
-
-
-        AdapterView.OnItemSelectedListener applyListener = new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) { applySidebarSettings(); }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-        };
-
-        if (spNativeFPS != null) spNativeFPS.setOnItemSelectedListener(applyListener);
-        if (spUpscalerMode != null) spUpscalerMode.setOnItemSelectedListener(applyListener);
-        if (spColorMode != null) spColorMode.setOnItemSelectedListener(applyListener);
-        if (swEnableFSR != null) swEnableFSR.setOnClickListener(v -> applySidebarSettings());
-
-
-        View.OnClickListener hudListener = v -> updateSidebarHud();
-        if (swHudMaster != null) swHudMaster.setOnClickListener(hudListener);
-        if (cbFps != null) cbFps.setOnClickListener(hudListener);
-        if (cbGpu != null) cbGpu.setOnClickListener(hudListener);
-        if (cbCpuRam != null) cbCpuRam.setOnClickListener(hudListener);
-        if (cbBattTemp != null) cbBattTemp.setOnClickListener(hudListener);
-        if (cbGraph != null) cbGraph.setOnClickListener(hudListener);
-        if (cbRenderer != null) cbRenderer.setOnClickListener(hudListener);
-
-        if (sbHudScale != null) {
-            sbHudScale.setOnTouchListener((v, event) -> {
-                if ((event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) && frameRating != null) {
-                    float scale = 0.5f + (sbHudScale.getValue() / 50.0f);
-                    frameRating.setHudScale(scale);
-                }
-                return false;
-            });
-        }
-
-        if (sbHudAlpha != null) {
-            sbHudAlpha.setOnTouchListener((v, event) -> {
-                if ((event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) && frameRating != null) {
-                    frameRating.setHudAlpha(sbHudAlpha.getValue() / 100.0f);
-                    if (event.getAction() == MotionEvent.ACTION_UP) {
-                    }
-                }
-                return false;
-            });
-        }
-
-        if (spNativeFPS != null) {
-            int savedFps = shortcut != null
-                    ? parseIntOrDefault(shortcut.getExtra("sidebarFpsLimit", "0"), 0)
-                    : 0;
-            int fpsIndex = 0;
-            for (int i = 0; i < NATIVE_FPS_VALUES.length; i++) {
-                if (NATIVE_FPS_VALUES[i] == savedFps) { fpsIndex = i; break; }
-            }
-            spNativeFPS.setSelection(fpsIndex);
-        }
-        if (sbSharpness != null) {
-            sbSharpness.setOnTouchListener((v, event) -> {
-                if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_MOVE) {
-                    applySidebarSettings();
-                }
-                return false;
-            });
-        }
-
-        if (btSaveGraphicsPreset != null) {
-            btSaveGraphicsPreset.setOnClickListener(v -> saveGraphicsPresetForShortcut());
-        }
-
-        if (hasShortcutGraphicsPreset) {
-            applySidebarSettings();
-        }
-    }
-
-    private void updateSidebarHud() {
-        if (frameRating == null) return;
-        if (swHudMaster.isChecked()) {
-            frameRating.enableByUser();
-            if (hudDataSource != null) hudDataSource.start();
-        } else {
-            frameRating.disableByUser();
-        }
-        frameRating.resetFromContainer();
-        if (swHudMaster.isChecked()) {
-            frameRating.toggleElement(0, cbFps.isChecked());
-            frameRating.toggleElement(2, cbGpu.isChecked());
-            frameRating.toggleElement(3, cbCpuRam.isChecked());
-            frameRating.toggleElement(4, cbBattTemp.isChecked());
-            frameRating.toggleElement(5, cbGraph.isChecked());
-            frameRating.toggleElement(6, cbRenderer.isChecked());
-            if (cbRam != null) frameRating.toggleElement(7, cbRam.isChecked());
-        }
-    }
-    private boolean restoreCurrentSidebarState() {
-        VulkanRenderer renderer = xServerView != null ? xServerView.getRenderer() : null;
-        int currentLimit = renderer != null ? renderer.getFpsLimit() : 0;
-        int index = 0;
-        for(int i=0; i<NATIVE_FPS_VALUES.length; i++) {
-            if(NATIVE_FPS_VALUES[i] == currentLimit) { index = i; break; }
-        }
-        if (spNativeFPS != null) spNativeFPS.setSelection(index);
-
-        if (renderer != null) {
-            int effectId = renderer.getEffectId();
-            float sharpness = renderer.getSharpness();
-            if (swEnableFSR != null) swEnableFSR.setChecked(effectId != VulkanRenderer.EFFECT_NONE);
-            if (sbSharpness != null) sbSharpness.setValue(Math.round(sharpness * 100f));
-            if (spUpscalerMode != null) {
-                int upscaleIndex = 0;
-                for (int i = 0; i < EFFECT_UPSCALER_VALUES.length; i++) {
-                    if (EFFECT_UPSCALER_VALUES[i] == effectId) { upscaleIndex = i; break; }
-                }
-                spUpscalerMode.setSelection(upscaleIndex);
-            }
-            if (spColorMode != null) {
-                int colorIndex = 0;
-                for (int i = 0; i < EFFECT_COLOR_VALUES.length; i++) {
-                    if (EFFECT_COLOR_VALUES[i] == effectId) { colorIndex = i; break; }
-                }
-                spColorMode.setSelection(colorIndex);
-            }
-        }
-
-        return restoreGraphicsPresetFromShortcut();
-    }
-
-
-private void applySidebarSettings() {
-        VulkanRenderer renderer = xServerView != null ? xServerView.getRenderer() : null;
-        if (renderer == null || spNativeFPS == null) return;
-        int fpsLimit = NATIVE_FPS_VALUES[spNativeFPS.getSelectedItemPosition()];
-        renderer.setFpsLimit(fpsLimit);
-        if (shortcut != null) {
-            shortcut.putExtra("sidebarFpsLimit", String.valueOf(fpsLimit));
-            shortcut.saveData();
-        }
-        int selectedEffect = (spColorMode != null) ? EFFECT_COLOR_VALUES[spColorMode.getSelectedItemPosition()] : VulkanRenderer.EFFECT_NONE;
-        boolean superResolutionEnabled = swEnableFSR != null && swEnableFSR.isChecked();
-        int upscalerEffect = (spUpscalerMode != null) ? EFFECT_UPSCALER_VALUES[spUpscalerMode.getSelectedItemPosition()] : VulkanRenderer.EFFECT_FSR;
-        int effectId = selectedEffect != VulkanRenderer.EFFECT_NONE
-                ? selectedEffect
-                : (superResolutionEnabled ? upscalerEffect : VulkanRenderer.EFFECT_NONE);
-        float sharpness = sbSharpness != null ? (sbSharpness.getValue() / 100.0f) : 0.5f;
-        renderer.setEffect(effectId, sharpness);
-    }
-
-    private void saveGraphicsPresetForShortcut() {
-        if (shortcut == null) {
-            AppUtils.showToast(this, "Open a game shortcut to save this preset");
-            return;
-        }
-        int upscalerIndex = spUpscalerMode != null ? spUpscalerMode.getSelectedItemPosition() : 0;
-        int effectIndex = spColorMode != null ? spColorMode.getSelectedItemPosition() : 0;
-        int sharpnessValue = sbSharpness != null ? Math.round(sbSharpness.getValue()) : 50;
-        boolean superResolutionEnabled = swEnableFSR != null && swEnableFSR.isChecked();
-        int fpsLimit = spNativeFPS != null ? NATIVE_FPS_VALUES[spNativeFPS.getSelectedItemPosition()] : 0;
-        shortcut.putExtra("sidebarUpscalerIndex", String.valueOf(upscalerIndex));
-        shortcut.putExtra("sidebarEffectIndex", String.valueOf(effectIndex));
-        shortcut.putExtra("sidebarSharpness", String.valueOf(sharpnessValue));
-        shortcut.putExtra("sidebarSuperResolution", superResolutionEnabled ? "1" : "0");
-        shortcut.putExtra("sidebarFpsLimit", String.valueOf(fpsLimit));
-        shortcut.saveData();
-        AppUtils.showToast(this, "Graphics preset saved to shortcut");
-    }
-
-    private boolean restoreGraphicsPresetFromShortcut() {
-        if (shortcut == null) return false;
-        boolean hasSavedPreset =
-                !shortcut.getExtra("sidebarUpscalerIndex", "").isEmpty() ||
-                !shortcut.getExtra("sidebarEffectIndex", "").isEmpty() ||
-                !shortcut.getExtra("sidebarSharpness", "").isEmpty() ||
-                !shortcut.getExtra("sidebarSuperResolution", "").isEmpty();
-
-        if (!hasSavedPreset) return false;
-
-        if (spUpscalerMode != null) {
-            int idx = parseIntOrDefault(shortcut.getExtra("sidebarUpscalerIndex", "0"), 0);
-            idx = Math.max(0, Math.min(idx, EFFECT_UPSCALER_VALUES.length - 1));
-            spUpscalerMode.setSelection(idx);
-        }
-        if (spColorMode != null) {
-            int idx = parseIntOrDefault(shortcut.getExtra("sidebarEffectIndex", "0"), 0);
-            idx = Math.max(0, Math.min(idx, EFFECT_COLOR_VALUES.length - 1));
-            spColorMode.setSelection(idx);
-        }
-        if (spNativeFPS != null) {
-            int savedFps = parseIntOrDefault(shortcut.getExtra("sidebarFpsLimit", "0"), 0);
-            int fpsIndex = 0;
-            for (int i = 0; i < NATIVE_FPS_VALUES.length; i++) {
-                if (NATIVE_FPS_VALUES[i] == savedFps) { fpsIndex = i; break; }
-            }
-            spNativeFPS.setSelection(fpsIndex);
-        }
-        if (sbSharpness != null) {
-            int sharpness = parseIntOrDefault(shortcut.getExtra("sidebarSharpness", "50"), 50);
-            sharpness = Math.max(0, Math.min(sharpness, 100));
-            sbSharpness.setValue(sharpness);
-        }
-        if (swEnableFSR != null) {
-            swEnableFSR.setChecked("1".equals(shortcut.getExtra("sidebarSuperResolution", "0")));
-        }
-        return true;
-    }
-
-    private int parseIntOrDefault(String value, int fallback) {
-        try {
-            return Integer.parseInt(value);
-        } catch (Exception ignored) {
-            return fallback;
-        }
-    }
-
-    private void setupSpinner(Spinner spinner, java.util.List<String> items, int colorInt) {
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                TextView view = (TextView) super.getView(position, convertView, parent);
-                view.setTextColor(colorInt);
-                view.setTextSize(12);
-                view.setTypeface(null, android.graphics.Typeface.BOLD);
-                return view;
-            }
-            @Override
-            public View getDropDownView(int position, View convertView, ViewGroup parent) {
-                TextView view = (TextView) super.getDropDownView(position, convertView, parent);
-                view.setTextColor(Color.WHITE);
-                view.setBackgroundColor(Color.parseColor("#333333"));
-                return view;
-            }
-        };
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
+    private void setupLeftSidebar() {
+        com.winlator.cmod.ui.SidebarComposeHelper.init(findViewById(R.id.LeftSidebarCompose), this);
     }
 
     private ActivityResultLauncher<Intent> controlsEditorActivityResultLauncher = registerForActivityResult(
@@ -1369,7 +988,7 @@ private void applySidebarSettings() {
             }
         }
     }
-    private void showInputControlsDialog() {
+    public void showInputControlsDialog() {
         final ContentDialog dialog = new ContentDialog(this, R.layout.input_controls_dialog);
         dialog.setTitle(R.string.input_controls);
         dialog.setIcon(R.drawable.icon_input_controls);

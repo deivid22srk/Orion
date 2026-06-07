@@ -12,17 +12,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <ScrollView
-        android:id="@+id/LeftSidebar"
-        android:layout_width="250dp"
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/LeftSidebarCompose"
+        android:layout_width="280dp"
         android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:background="#141218"
-        android:fillViewport="true">
-        
-        <include layout="@layout/left_sidebar" />
-
-    </ScrollView>
+        android:layout_gravity="start" />
 
     <EditText
         android:id="@+id/XRTextInput"
