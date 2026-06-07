@@ -32,12 +32,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -68,12 +64,7 @@ fun OrionApp(
     onStartShortcut: (Shortcut) -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = remember { CoroutineScope(Dispatchers.Main + SupervisorJob()) }
-    DisposableEffect(Unit) {
-        onDispose {
-            scope.cancel()
-        }
-    }
+    val scope = rememberCoroutineScope()
     var currentScreen by remember { mutableStateOf(Screen.Containers) }
     
     ModalNavigationDrawer(
