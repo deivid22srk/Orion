@@ -1,6 +1,8 @@
 package com.winlator.cmod.container;
 
 import android.os.Environment;
+import android.content.SharedPreferences;
+import androidx.preference.PreferenceManager;
 
 import com.winlator.cmod.box64.Box64Preset;
 import com.winlator.cmod.contentdialog.DXVKConfigDialog;
@@ -109,6 +111,10 @@ public class Container {
     }
 
     public String getScreenSize() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_screen_size", screenSize);
+        }
         return screenSize;
     }
 
@@ -117,6 +123,10 @@ public class Container {
     }
 
     public String getEnvVars() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_env_vars", envVars);
+        }
         return envVars;
     }
 
@@ -125,6 +135,10 @@ public class Container {
     }
 
     public String getGraphicsDriver() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_graphics_driver", graphicsDriver);
+        }
         return graphicsDriver;
     }
 
@@ -150,6 +164,10 @@ public class Container {
     public void setRendererSwapRB(boolean v) { this.rendererSwapRB = v; }
 
     public String getDXWrapper() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_dxwrapper", dxwrapper);
+        }
         return dxwrapper;
     }
 
@@ -166,6 +184,10 @@ public class Container {
     }
 
     public String getAudioDriver() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_audio_driver", audioDriver);
+        }
         return audioDriver;
     }
 
@@ -238,6 +260,11 @@ public class Container {
     }
 
     public String getCPUList(boolean allowFallback) {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            String val = prefs.getString("global_container_cpu_list", null);
+            if (val != null && !val.isEmpty()) return val;
+        }
         return cpuList != null ? cpuList : (allowFallback ? getFallbackCPUList() : null);
     }
 
@@ -250,6 +277,11 @@ public class Container {
     }
 
     public String getCPUListWoW64(boolean allowFallback) {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            String val = prefs.getString("global_container_cpu_list_wow64", null);
+            if (val != null && !val.isEmpty()) return val;
+        }
         return cpuListWoW64 != null ? cpuListWoW64 : (allowFallback ? getFallbackCPUListWoW64() : null);
     }
 
@@ -274,6 +306,10 @@ public class Container {
     }
 
     public String getBox64Preset() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_box64_preset", box64Preset);
+        }
         return box64Preset;
     }
 
@@ -330,6 +366,10 @@ public class Container {
     }
 
     public String getWineVersion() {
+        if (containerManager != null && containerManager.getContext() != null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(containerManager.getContext());
+            return prefs.getString("global_container_wine_version", wineVersion);
+        }
         return wineVersion;
     }
 

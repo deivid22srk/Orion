@@ -38,6 +38,9 @@ public class ContainerManager {
         File rootDir = ImageFs.find(context).getRootDir();
         homeDir = new File(rootDir, "home");
         loadContainers();
+        if (containers.isEmpty()) {
+            createDefaultMicroContainer();
+        }
         isInitialized = true;
     }
 
@@ -281,10 +284,24 @@ public class ContainerManager {
         return null;  // Return null if no matching container is found
     }
 
+    public void createDefaultMicroContainer() {
+        try {
+            JSONObject data = new JSONObject();
+            data.put("name", "Orion Micro-Container");
+            data.put("wineVersion", WineInfo.MAIN_WINE_VERSION.identifier());
+            data.put("screenSize", Container.DEFAULT_SCREEN_SIZE);
+            data.put("graphicsDriver", Container.DEFAULT_GRAPHICS_DRIVER);
+            data.put("dxwrapper", Container.DEFAULT_DXWRAPPER);
+            data.put("audioDriver", Container.DEFAULT_AUDIO_DRIVER);
+            
+            ContentsManager contentsManager = new ContentsManager(context);
+            createContainer(data, contentsManager);
+        } catch (Exception e) {
+            Log.e("ContainerManager", "Failed to create default micro container", e);
+        }
+    }
+
     private void runOnUiThread(Runnable action) {
         new Handler(Looper.getMainLooper()).post(action);
     }
-
-
-
 }
