@@ -34,7 +34,7 @@ O foco principal deste projeto é reescrever a interface de usuário do aplicati
 | **Container Editor** | Java + XML (Nested Forms) | Jetpack Compose (Material 3 Tabs) |  Concluído |
 | **Input Controls** | Java + XML (Custom Dialogs) | Jetpack Compose (Material 3 Cards) |  Concluído |
 | **App Settings** | Java PreferenceFragment | Jetpack Compose (Material 3 Switches) |  Concluído |
-| **Navegação (Sidebar)** | DrawerLayout + NavigationView | ModalNavigationDrawer (Material 3) |  Concluído |
+| **Navegação (NavigationBar)** | DrawerLayout + NavigationView | NavigationBar (Material 3 Expressivo) |  Concluído |
 | **Material You 3 Theme** | XML AppTheme (Estático) | OrionTheme (Dynamic Color support) |  Concluído |
 
 ---
