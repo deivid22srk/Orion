@@ -28,6 +28,11 @@ jobs:
       run: |
         echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;29.0.14206865"
 
+    - name: Install glslangValidator
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y glslang-tools
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
