@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DrawerValue
@@ -39,24 +39,29 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.winlator.cmod.container.Container
 import com.winlator.cmod.container.ContainerManager
+import com.winlator.cmod.container.Shortcut
 import com.winlator.cmod.ui.screens.ContainersScreen
+import com.winlator.cmod.ui.screens.FileManagerScreen
 import com.winlator.cmod.ui.screens.InputControlsScreen
 import com.winlator.cmod.ui.screens.SettingsScreen
+import com.winlator.cmod.ui.screens.ShortcutsScreen
 import kotlinx.coroutines.launch
 
 enum class Screen(val title: String, val icon: ImageVector) {
     Containers("Containers", Icons.Default.Home),
+    Shortcuts("Meus Jogos (Atalhos)", Icons.Default.Star),
+    FileManager("Gerenciador de Arquivos", Icons.Default.Folder),
     InputControls("Controles de Entrada", Icons.Default.Build),
-    Settings("Configurações", Icons.Default.Settings),
-    Shortcuts("Atalhos", Icons.Default.Star),
-    Contents("Conteúdo adicional", Icons.Default.PlayArrow)
+    Settings("Configurações", Icons.Default.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrionApp(
     containerManager: ContainerManager,
-    onStartContainer: (Container) -> Unit
+    onStartContainer: (Container) -> Unit,
+    onRunExe: (Container, String) -> Unit,
+    onStartShortcut: (Shortcut) -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -138,32 +143,18 @@ fun OrionApp(
                         containerManager = containerManager,
                         onStartContainer = onStartContainer
                     )
+                    Screen.Shortcuts -> ShortcutsScreen(
+                        containerManager = containerManager,
+                        onStartShortcut = onStartShortcut
+                    )
+                    Screen.FileManager -> FileManagerScreen(
+                        containerManager = containerManager,
+                        onRunExe = onRunExe
+                    )
                     Screen.InputControls -> InputControlsScreen(
                         containerManager = containerManager
                     )
                     Screen.Settings -> SettingsScreen()
-                    Screen.Shortcuts -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Nenhum atalho criado ainda.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    Screen.Contents -> Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Gerenciamento de Conteúdo Adicional do Wine e Proton.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
                 }
             }
         }

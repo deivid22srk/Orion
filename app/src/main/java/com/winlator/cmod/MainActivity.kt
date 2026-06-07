@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +19,8 @@ import com.winlator.cmod.ui.OrionApp
 import com.winlator.cmod.ui.theme.OrionTheme
 import com.winlator.cmod.xenvironment.ImageFsInstaller
 import java.io.File
+import java.io.FileWriter
+import java.io.PrintWriter
 
 class MainActivity : ComponentActivity() {
 
@@ -61,10 +64,36 @@ class MainActivity : ComponentActivity() {
                 OrionApp(
                     containerManager = containerManager,
                     onStartContainer = { container ->
-                        // Activate and launch container
                         containerManager.activateContainer(container)
                         val intent = Intent(this, XServerDisplayActivity::class.java)
                         intent.putExtra("container_id", container.id)
+                        startActivity(intent)
+                    },
+                    onRunExe = { container, exePath ->
+                        try {
+                            val tempShortcut = File(cacheDir, "temp_run.desktop")
+                            PrintWriter(FileWriter(tempShortcut)).use { writer ->
+                                writer.println("[Desktop Entry]")
+                                writer.println("Name=" + File(exePath).name)
+                                writer.println("Exec=env WINEPREFIX=\"/home/xuser/.wine\" wine \"$exePath\"")
+                                writer.println("Type=Application")
+                                writer.println("container_id:${container.id}")
+                            }
+                            containerManager.activateContainer(container)
+                            val intent = Intent(this, XServerDisplayActivity::class.java)
+                            intent.putExtra("container_id", container.id)
+                            intent.putExtra("shortcut_path", tempShortcut.absolutePath)
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(this, "Erro ao iniciar executável: ${e.message}", Toast.LENGTH_LONG).show()
+                            e.printStackTrace()
+                        }
+                    },
+                    onStartShortcut = { shortcut ->
+                        containerManager.activateContainer(shortcut.container)
+                        val intent = Intent(this, XServerDisplayActivity::class.java)
+                        intent.putExtra("container_id", shortcut.container.id)
+                        intent.putExtra("shortcut_path", shortcut.file.absolutePath)
                         startActivity(intent)
                     }
                 )
@@ -83,7 +112,6 @@ class MainActivity : ComponentActivity() {
                 permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
         } else {
-            // Android 11+ manages storage using Action Manage App All Files Access Permission
             if (!Environment.isExternalStorageManager()) {
                 try {
                     val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
