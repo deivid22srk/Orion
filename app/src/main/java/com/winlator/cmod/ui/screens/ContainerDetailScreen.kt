@@ -21,11 +21,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +37,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -98,32 +97,32 @@ fun ContainerDetailScreen(
     }
 
     // 2. States for Fields
-    var name by remember { mutableStateOf(container?.name ?: "Container-${containerManager.nextContainerId}") }
-    var wineVersion by remember { mutableStateOf(container?.wineVersion ?: wineVersions.first()) }
-    var screenSize by remember { mutableStateOf(container?.screenSize ?: Container.DEFAULT_SCREEN_SIZE) }
-    var graphicsDriver by remember { mutableStateOf(container?.graphicsDriver ?: Container.DEFAULT_GRAPHICS_DRIVER) }
-    var graphicsDriverConfig by remember { mutableStateOf(container?.graphicsDriverConfig ?: Container.DEFAULT_GRAPHICSDRIVERCONFIG) }
+    var name by remember { mutableStateOf(container?.getName() ?: "Container-${containerManager.getNextContainerId()}") }
+    var wineVersion by remember { mutableStateOf(container?.getWineVersion() ?: wineVersions.first()) }
+    var screenSize by remember { mutableStateOf(container?.getScreenSize() ?: Container.DEFAULT_SCREEN_SIZE) }
+    var graphicsDriver by remember { mutableStateOf(container?.getGraphicsDriver() ?: Container.DEFAULT_GRAPHICS_DRIVER) }
+    var graphicsDriverConfig by remember { mutableStateOf(container?.getGraphicsDriverConfig() ?: Container.DEFAULT_GRAPHICSDRIVERCONFIG) }
     var dxwrapper by remember { mutableStateOf(container?.getDXWrapper() ?: Container.DEFAULT_DXWRAPPER) }
-    var dxwrapperConfig by remember { mutableStateOf(container?.dxwrapperConfig ?: Container.DEFAULT_DXWRAPPERCONFIG) }
-    var audioDriver by remember { mutableStateOf(container?.audioDriver ?: Container.DEFAULT_AUDIO_DRIVER) }
-    var envVars by remember { mutableStateOf(container?.envVars ?: Container.DEFAULT_ENV_VARS) }
+    var dxwrapperConfig by remember { mutableStateOf(container?.getDXWrapperConfig() ?: Container.DEFAULT_DXWRAPPERCONFIG) }
+    var audioDriver by remember { mutableStateOf(container?.getAudioDriver() ?: Container.DEFAULT_AUDIO_DRIVER) }
+    var envVars by remember { mutableStateOf(container?.getEnvVars() ?: Container.DEFAULT_ENV_VARS) }
     var showFPS by remember { mutableStateOf(container?.isShowFPS() ?: true) }
-    var fullscreenStretched by remember { mutableStateOf(container?.isFullscreenStretched ?: false) }
-    var exclusiveXInput by remember { mutableStateOf(container?.isExclusiveXInput ?: true) }
+    var fullscreenStretched by remember { mutableStateOf(container?.isFullscreenStretched() ?: false) }
+    var exclusiveXInput by remember { mutableStateOf(container?.isExclusiveXInput() ?: true) }
     
-    val inputType = container?.inputType ?: WinHandler.DEFAULT_INPUT_TYPE.toInt()
+    val inputType = container?.getInputType() ?: WinHandler.DEFAULT_INPUT_TYPE.toInt()
     var enableXInput by remember { mutableStateOf((inputType and WinHandler.FLAG_INPUT_TYPE_XINPUT.toInt()) == WinHandler.FLAG_INPUT_TYPE_XINPUT.toInt()) }
     var enableDInput by remember { mutableStateOf((inputType and WinHandler.FLAG_INPUT_TYPE_DINPUT.toInt()) == WinHandler.FLAG_INPUT_TYPE_DINPUT.toInt()) }
-    var lc_all by remember { mutableStateOf(container?.lc_all ?: "pt_BR.UTF-8") }
+    var lc_all by remember { mutableStateOf(container?.getLC_ALL() ?: "pt_BR.UTF-8") }
 
     // Advanced & Emulator settings
     val wi = remember(wineVersion) { WineInfo.fromIdentifier(context, contentsManager, wineVersion) }
     val isArm64EC = wi.isArm64EC()
 
-    var emulator by remember { mutableStateOf(container?.emulator ?: if (isArm64EC) "FEXCore" else "Box64") }
-    var startupSelection by remember { mutableStateOf(container?.startupSelection?.toInt() ?: Container.STARTUP_SELECTION_ESSENTIAL.toInt()) }
-    var desktopTheme by remember { mutableStateOf(container?.desktopTheme ?: WineThemeManager.DEFAULT_DESKTOP_THEME) }
-    var midiSoundFont by remember { mutableStateOf(container?.midiSoundFont ?: "") }
+    var emulator by remember { mutableStateOf(container?.getEmulator() ?: if (isArm64EC) "FEXCore" else "Box64") }
+    var startupSelection by remember { mutableStateOf(container?.getStartupSelection()?.toInt() ?: Container.STARTUP_SELECTION_ESSENTIAL.toInt()) }
+    var desktopTheme by remember { mutableStateOf(container?.getDesktopTheme() ?: WineThemeManager.DEFAULT_DESKTOP_THEME) }
+    var midiSoundFont by remember { mutableStateOf(container?.getMIDISoundFont() ?: "") }
 
     // CPU Affinity Cores Setup
     val numCores = remember { Runtime.getRuntime().availableProcessors().coerceAtLeast(8) }
@@ -140,14 +139,14 @@ fun ContainerDetailScreen(
     val cpuCoresWoW64State = remember { mutableStateListOf<Boolean>().apply { addAll(initialCpuListWoW64) } }
 
     // Presets & Versions of emulators
-    var box64Preset by remember { mutableStateOf(container?.box64Preset ?: Box64Preset.COMPATIBILITY) }
+    var box64Preset by remember { mutableStateOf(container?.getBox64Preset() ?: Box64Preset.COMPATIBILITY) }
     
     // Dynamic Box64 versions
     val box64Versions = remember(isArm64EC) {
         val set = mutableSetOf<String>()
         set.add(if (isArm64EC) DefaultVersion.WOWBOX64 else DefaultVersion.BOX64)
-        if (container != null && container.box64Version != null && container.box64Version.isNotEmpty()) {
-            set.add(container.box64Version)
+        if (container != null && container.getBox64Version() != null && container.getBox64Version().isNotEmpty()) {
+            set.add(container.getBox64Version())
         }
         val type = if (isArm64EC) ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64 else ContentProfile.ContentType.CONTENT_TYPE_BOX64
         for (profile in contentsManager.getProfiles(type)) {
@@ -160,16 +159,16 @@ fun ContainerDetailScreen(
         }
         set.toList()
     }
-    var box64Version by remember(box64Versions) { mutableStateOf(container?.box64Version ?: box64Versions.first()) }
+    var box64Version by remember(box64Versions) { mutableStateOf(container?.getBox64Version() ?: box64Versions.first()) }
 
-    var fexcorePreset by remember { mutableStateOf(container?.fexcorePreset ?: FEXCorePreset.INTERMEDIATE) }
+    var fexcorePreset by remember { mutableStateOf(container?.getFEXCorePreset() ?: FEXCorePreset.INTERMEDIATE) }
 
     // Dynamic FEXCore versions
     val fexcoreVersions = remember {
         val set = mutableSetOf<String>()
         set.add(DefaultVersion.FEXCORE)
-        if (container != null && container.fexcoreVersion != null && container.fexcoreVersion.isNotEmpty()) {
-            set.add(container.fexcoreVersion)
+        if (container != null && container.getFEXCoreVersion() != null && container.getFEXCoreVersion().isNotEmpty()) {
+            set.add(container.getFEXCoreVersion())
         }
         for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE)) {
             if (profile.remoteUrl != null) continue
@@ -181,24 +180,24 @@ fun ContainerDetailScreen(
         }
         set.toList()
     }
-    var fexcoreVersion by remember(fexcoreVersions) { mutableStateOf(container?.fexcoreVersion ?: fexcoreVersions.first()) }
+    var fexcoreVersion by remember(fexcoreVersions) { mutableStateOf(container?.getFEXCoreVersion() ?: fexcoreVersions.first()) }
 
     // WinComponents Configuration
-    val initialWinComponents = remember { container?.winComponents ?: Container.DEFAULT_WINCOMPONENTS }
+    val initialWinComponents = remember { container?.getWinComponents() ?: Container.DEFAULT_WINCOMPONENTS }
     val winComponentsMap = remember {
         val map = parseWinComponents(initialWinComponents)
         mutableStateMapOf<String, Int>().apply { putAll(map) }
     }
 
     // Mapped Drives Configuration
-    val initialDrives = remember { container?.drives ?: Container.DEFAULT_DRIVES }
+    val initialDrives = remember { container?.getDrives() ?: Container.DEFAULT_DRIVES }
     val drivesList = remember {
         val parsed = parseDrives(initialDrives)
         mutableStateListOf<Pair<String, String>>().apply { addAll(parsed) }
     }
 
     // XR Controls Mapping Configuration
-    var primaryController by remember { mutableStateOf(container?.primaryController ?: 1) }
+    var primaryController by remember { mutableStateOf(container?.getPrimaryController() ?: 1) }
     val defaultKeys = remember {
         mapOf(
             Container.XrControllerMapping.BUTTON_A to XKeycode.KEY_A,
@@ -217,8 +216,8 @@ fun ContainerDetailScreen(
         val map = mutableStateMapOf<Container.XrControllerMapping, XKeycode>()
         Container.XrControllerMapping.values().forEach { mapping ->
             val defaultVal = defaultKeys[mapping] ?: XKeycode.KEY_NONE
-            val keycodeId = if (container != null) container.getControllerMapping(mapping) else defaultVal.id.toByte()
-            val keycode = XKeycode.values().find { it.id == keycodeId.toInt() } ?: defaultVal
+            val keycodeId = if (container != null) container.getControllerMapping(mapping) else defaultVal.id
+            val keycode = XKeycode.values().find { it.id == keycodeId } ?: defaultVal
             map[mapping] = keycode
         }
         map
@@ -310,7 +309,7 @@ fun ContainerDetailScreen(
                     val charArray = CharArray(Container.XrControllerMapping.values().size)
                     Container.XrControllerMapping.values().forEach { mapping ->
                         val keycode = selectedMappings[mapping] ?: defaultKeys[mapping] ?: XKeycode.KEY_NONE
-                        charArray[mapping.ordinal()] = keycode.id.toChar()
+                        charArray[mapping.ordinal] = keycode.id.toInt().toChar()
                     }
                     data.put("controllerMapping", String(charArray))
 
@@ -384,7 +383,7 @@ fun ContainerDetailScreen(
             }
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
         // 5. Tab Contents
         Box(
@@ -569,7 +568,7 @@ fun ContainerDetailScreen(
                             )
                         }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         OutlinedCard(
                             colors = CardDefaults.outlinedCardColors(
@@ -801,7 +800,7 @@ fun ContainerDetailScreen(
                             }
                         )
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
                         Text(
                             text = "Mapeamento dos Botões VR/XR",
