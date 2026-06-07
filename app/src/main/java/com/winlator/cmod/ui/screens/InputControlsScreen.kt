@@ -28,32 +28,51 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import com.winlator.cmod.inputcontrols.ControlsProfile
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.winlator.cmod.container.ContainerManager
 import com.winlator.cmod.inputcontrols.InputControlsManager
+import com.winlator.cmod.inputcontrols.ControlsProfile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun InputControlsScreen(containerManager: ContainerManager) {
     val inputControlsManager = remember { InputControlsManager(containerManager.context) }
-    val profiles = remember {
-        mutableStateListOf<ControlsProfile>().apply {
-            addAll(inputControlsManager.getProfiles())
-        }
-    }
+    val profiles = remember { mutableStateListOf<ControlsProfile>() }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
     
     var showCreateDialog by remember { mutableStateOf(false) }
     var newProfileName by remember { mutableStateOf("") }
 
+    LaunchedEffect(Unit) {
+        val loaded = withContext(Dispatchers.IO) {
+            inputControlsManager.getProfiles()
+        }
+        profiles.clear()
+        profiles.addAll(loaded)
+        isLoading = false
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        if (profiles.isEmpty()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                // Empty placeholder or loading spinner to prevent flicker
+            }
+        } else if (profiles.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -71,12 +90,16 @@ fun InputControlsScreen(containerManager: ContainerManager) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(profiles) { profile ->
+                items(profiles, key = { it.id }) { profile ->
                     ProfileCard(
                         profile = profile,
                         onDelete = {
-                            inputControlsManager.removeProfile(profile)
-                            profiles.remove(profile)
+                            scope.launch(Dispatchers.IO) {
+                                inputControlsManager.removeProfile(profile)
+                                withContext(Dispatchers.Main) {
+                                    profiles.remove(profile)
+                                }
+                            }
                         }
                     )
                 }
@@ -120,10 +143,14 @@ fun InputControlsScreen(containerManager: ContainerManager) {
                     TextButton(
                         onClick = {
                             if (newProfileName.isNotBlank()) {
-                                val newProfile = inputControlsManager.createProfile(newProfileName)
-                                profiles.add(newProfile)
-                                newProfileName = ""
-                                showCreateDialog = false
+                                scope.launch(Dispatchers.IO) {
+                                    val newProfile = inputControlsManager.createProfile(newProfileName)
+                                    withContext(Dispatchers.Main) {
+                                        profiles.add(newProfile)
+                                        newProfileName = ""
+                                        showCreateDialog = false
+                                    }
+                                }
                             }
                         }
                     ) {

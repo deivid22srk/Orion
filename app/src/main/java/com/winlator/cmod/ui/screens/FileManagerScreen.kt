@@ -41,10 +41,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,9 @@ import androidx.compose.ui.unit.dp
 import com.winlator.cmod.container.Container
 import com.winlator.cmod.container.ContainerManager
 import com.winlator.cmod.xenvironment.ImageFs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -64,25 +69,29 @@ fun FileManagerScreen(
     onRunExe: (Container, String) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var currentDir by remember {
         val defaultDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         mutableStateOf(if (defaultDir.exists()) defaultDir else Environment.getExternalStorageDirectory())
     }
 
     val filesList = remember { mutableStateListOf<File>() }
+    var isLoading by remember { mutableStateOf(true) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+
     fun loadDirectory(dir: File) {
         currentDir = dir
-        filesList.clear()
-        val list = dir.listFiles()
-        if (list != null) {
-            filesList.addAll(list.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })))
-        }
+        refreshTrigger++
     }
 
-    // Load initial directory
-    remember(currentDir) {
-        loadDirectory(currentDir)
-        true
+    LaunchedEffect(currentDir, refreshTrigger) {
+        isLoading = true
+        val list = withContext(Dispatchers.IO) {
+            currentDir.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })) ?: emptyList()
+        }
+        filesList.clear()
+        filesList.addAll(list)
+        isLoading = false
     }
 
     // Exe Selection States
@@ -161,34 +170,46 @@ fun FileManagerScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Files List
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .weight(1f)
         ) {
-            items(filesList) { file ->
-                FileListItem(
-                    file = file,
-                    onClick = {
-                        if (file.isDirectory) {
-                            loadDirectory(file)
-                        } else if (file.name.endsWith(".exe", ignoreCase = true)) {
-                            selectedExeFile = file
-                            isShortcutCreation = false
-                            showContainerSelectDialog = true
-                        }
-                    },
-                    onDelete = {
-                        file.deleteRecursively()
-                        loadDirectory(currentDir)
-                    },
-                    onCreateShortcut = {
-                        selectedExeFile = file
-                        isShortcutCreation = true
-                        showContainerSelectDialog = true
+            if (isLoading) {
+                // Empty placeholder or simple indicator to avoid jank
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filesList, key = { it.absolutePath }) { file ->
+                        FileListItem(
+                            file = file,
+                            onClick = {
+                                if (file.isDirectory) {
+                                    loadDirectory(file)
+                                } else if (file.name.endsWith(".exe", ignoreCase = true)) {
+                                    selectedExeFile = file
+                                    isShortcutCreation = false
+                                    showContainerSelectDialog = true
+                                }
+                            },
+                            onDelete = {
+                                scope.launch(Dispatchers.IO) {
+                                    file.deleteRecursively()
+                                    withContext(Dispatchers.Main) {
+                                        refreshTrigger++
+                                    }
+                                }
+                            },
+                            onCreateShortcut = {
+                                selectedExeFile = file
+                                isShortcutCreation = true
+                                showContainerSelectDialog = true
+                            }
+                        )
                     }
-                )
+                }
             }
         }
 
@@ -260,9 +281,13 @@ fun FileManagerScreen(
                             val file = selectedExeFile
                             if (container != null && file != null) {
                                 if (isShortcutCreation) {
-                                    // Create desktop shortcut logic
-                                    createShortcut(container, file)
-                                    Toast.makeText(context, "Atalho criado com sucesso!", Toast.LENGTH_SHORT).show()
+                                    scope.launch(Dispatchers.IO) {
+                                        // Create desktop shortcut logic
+                                        createShortcut(container, file)
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Atalho criado com sucesso!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 } else {
                                     onRunExe(container, file.absolutePath)
                                 }

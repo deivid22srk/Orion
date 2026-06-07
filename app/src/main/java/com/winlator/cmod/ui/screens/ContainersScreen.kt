@@ -98,7 +98,7 @@ fun ContainersScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(containers) { container ->
+                    items(containers, key = { it.id }) { container ->
                         ContainerCard(
                             container = container,
                             onStart = { onStartContainer(container) },

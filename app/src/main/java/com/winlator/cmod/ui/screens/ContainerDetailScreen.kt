@@ -72,6 +72,8 @@ import com.winlator.cmod.xserver.XKeycode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,31 +85,24 @@ fun ContainerDetailScreen(
 ) {
     val context = containerManager.context
     val contentsManager = remember {
-        ContentsManager(context).apply { syncContents() }
+        ContentsManager(context)
     }
 
-    // 1. Wine Versions List
-    val wineVersions = remember {
-        val list = mutableListOf<String>()
-        val staticVersions = context.resources.getStringArray(com.winlator.cmod.R.array.wine_entries)
-        list.addAll(staticVersions)
-        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_WINE)) {
-            if (profile.remoteUrl != null) continue
-            list.add(ContentsManager.getEntryName(profile))
-        }
-        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_PROTON)) {
-            if (profile.remoteUrl != null) continue
-            list.add(ContentsManager.getEntryName(profile))
-        }
-        if (list.isEmpty()) {
-            list.add("proton-9.0-x86_64")
-        }
-        list
-    }
+    var isDataLoaded by remember { mutableStateOf(false) }
+
+    // State lists to hold asynchronously loaded data
+    val wineVersions = remember { mutableStateListOf<String>() }
+    val dxvkVersions = remember { mutableStateListOf<String>() }
+    val vkd3dVersions = remember { mutableStateListOf<String>() }
+    val box64Versions = remember { mutableStateListOf<String>() }
+    val fexcoreVersions = remember { mutableStateListOf<String>() }
+    val soundFontOptions = remember { mutableStateListOf<String>() }
+    val graphicsDriverVersions = remember { mutableStateListOf<String>() }
+    val gpuNames = remember { mutableStateListOf<String>() }
 
     // 2. States for Fields
     var name by remember { mutableStateOf(container?.getName() ?: "Container-${containerManager.getNextContainerId()}") }
-    var wineVersion by remember { mutableStateOf(container?.getWineVersion() ?: wineVersions.first()) }
+    var wineVersion by remember { mutableStateOf(container?.getWineVersion() ?: "proton-9.0-x86_64") }
     var screenSize by remember { mutableStateOf(container?.getScreenSize() ?: Container.DEFAULT_SCREEN_SIZE) }
     var graphicsDriver by remember { mutableStateOf(container?.getGraphicsDriver() ?: Container.DEFAULT_GRAPHICS_DRIVER) }
     var graphicsDriverConfig by remember { mutableStateOf(container?.getGraphicsDriverConfig() ?: Container.DEFAULT_GRAPHICSDRIVERCONFIG) }
@@ -138,44 +133,6 @@ fun ContainerDetailScreen(
     var showWineD3DDialog by remember { mutableStateOf(false) }
     var showGraphicsDriverDialog by remember { mutableStateOf(false) }
 
-    // DXVK Versions
-    val dxvkVersions = remember(isArm64EC) {
-        val list = mutableListOf<String>()
-        val originalItems = context.resources.getStringArray(com.winlator.cmod.R.array.dxvk_version_entries)
-        list.addAll(originalItems)
-        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_DXVK)) {
-            if (profile.remoteUrl != null) continue
-            val entryName = ContentsManager.getEntryName(profile)
-            val firstDashIndex = entryName.indexOf('-')
-            if (firstDashIndex != -1) {
-                list.add(entryName.substring(firstDashIndex + 1))
-            }
-        }
-        list.filter { version ->
-            isArm64EC || !version.lowercase().contains("arm64ec")
-        }
-    }
-
-    // VKD3D Versions
-    val vkd3dVersions = remember(isArm64EC) {
-        val list = mutableListOf<String>()
-        val originalItems = context.resources.getStringArray(com.winlator.cmod.R.array.vkd3d_version_entries)
-        for (version in originalItems) {
-            if (isArm64EC || !version.lowercase().contains("arm64ec")) {
-                list.add(version)
-            }
-        }
-        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_VKD3D)) {
-            if (profile.remoteUrl != null) continue
-            val displayName = profile.verName
-            val versionCode = profile.verCode
-            if (isArm64EC || !displayName.lowercase().contains("arm64ec")) {
-                list.add("$displayName-$versionCode")
-            }
-        }
-        list
-    }
-
     // CPU Affinity Cores Setup
     val numCores = remember { Runtime.getRuntime().availableProcessors().coerceAtLeast(8) }
     val initialCpuList = remember {
@@ -192,47 +149,10 @@ fun ContainerDetailScreen(
 
     // Presets & Versions of emulators
     var box64Preset by remember { mutableStateOf(container?.getBox64Preset() ?: Box64Preset.COMPATIBILITY) }
-    
-    // Dynamic Box64 versions
-    val box64Versions = remember(isArm64EC) {
-        val set = mutableSetOf<String>()
-        set.add(if (isArm64EC) DefaultVersion.WOWBOX64 else DefaultVersion.BOX64)
-        if (container != null && container.getBox64Version() != null && container.getBox64Version().isNotEmpty()) {
-            set.add(container.getBox64Version())
-        }
-        val type = if (isArm64EC) ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64 else ContentProfile.ContentType.CONTENT_TYPE_BOX64
-        for (profile in contentsManager.getProfiles(type)) {
-            if (profile.remoteUrl != null) continue
-            val entryName = ContentsManager.getEntryName(profile)
-            val dashIdx = entryName.indexOf('-')
-            if (dashIdx != -1) {
-                set.add(entryName.substring(dashIdx + 1))
-            }
-        }
-        set.toList()
-    }
-    var box64Version by remember(box64Versions) { mutableStateOf(container?.getBox64Version() ?: box64Versions.first()) }
+    var box64Version by remember { mutableStateOf(container?.getBox64Version() ?: "") }
 
     var fexcorePreset by remember { mutableStateOf(container?.getFEXCorePreset() ?: FEXCorePreset.INTERMEDIATE) }
-
-    // Dynamic FEXCore versions
-    val fexcoreVersions = remember {
-        val set = mutableSetOf<String>()
-        set.add(DefaultVersion.FEXCORE)
-        if (container != null && container.getFEXCoreVersion() != null && container.getFEXCoreVersion().isNotEmpty()) {
-            set.add(container.getFEXCoreVersion())
-        }
-        for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE)) {
-            if (profile.remoteUrl != null) continue
-            val entryName = ContentsManager.getEntryName(profile)
-            val dashIdx = entryName.indexOf('-')
-            if (dashIdx != -1) {
-                set.add(entryName.substring(dashIdx + 1))
-            }
-        }
-        set.toList()
-    }
-    var fexcoreVersion by remember(fexcoreVersions) { mutableStateOf(container?.getFEXCoreVersion() ?: fexcoreVersions.first()) }
+    var fexcoreVersion by remember { mutableStateOf(container?.getFEXCoreVersion() ?: "") }
 
     // WinComponents Configuration
     val initialWinComponents = remember { container?.getWinComponents() ?: Container.DEFAULT_WINCOMPONENTS }
@@ -246,38 +166,6 @@ fun ContainerDetailScreen(
     val drivesList = remember {
         val parsed = parseDrives(initialDrives)
         mutableStateListOf<Pair<String, String>>().apply { addAll(parsed) }
-    }
-
-    // Graphics Driver Versions
-    val graphicsDriverVersions = remember {
-        val list = mutableListOf<String>()
-        val defaultVersions = context.resources.getStringArray(com.winlator.cmod.R.array.wrapper_graphics_driver_version_entries)
-        for (version in defaultVersions) {
-            if (GPUInformation.isDriverSupported(version, context)) {
-                list.add(version)
-            }
-        }
-        val adrenotoolsManager = AdrenotoolsManager(context)
-        list.addAll(adrenotoolsManager.enumarateInstalledDrivers())
-        if (list.isEmpty()) {
-            list.add("System")
-        }
-        list
-    }
-
-    // GPU names list
-    val gpuNames = remember {
-        val list = mutableListOf<String>()
-        list.add("Device")
-        try {
-            val gpuNameList = FileUtils.readString(context, "gpu_cards.json")
-            val jarray = JSONArray(gpuNameList)
-            for (i in 0 until jarray.length()) {
-                val jobj = jarray.getJSONObject(i)
-                list.add(jobj.getString("name"))
-            }
-        } catch (e: Exception) {}
-        list
     }
 
     // XR Controls Mapping Configuration
@@ -318,23 +206,182 @@ fun ContainerDetailScreen(
         "XR Controles"
     )
 
-    // SoundFonts setup
-    val soundFontOptions = remember {
-        val list = mutableListOf<String>()
-        list.add("-- Desativado --")
-        list.add(MidiManager.DEFAULT_SF2_FILE)
-        val sfDir = MidiManager.getSoundFontDir(context)
-        if (sfDir.exists()) {
-            val files = sfDir.listFiles()
-            if (files != null) {
-                for (file in files) {
-                    if (file.isFile && file.name.endsWith(".sf2", ignoreCase = true)) {
-                        list.add(file.name)
+    LaunchedEffect(isArm64EC) {
+        withContext(Dispatchers.IO) {
+            contentsManager.syncContents()
+
+            // 1. Wine Versions List
+            val wineList = mutableListOf<String>()
+            val staticVersions = context.resources.getStringArray(com.winlator.cmod.R.array.wine_entries)
+            wineList.addAll(staticVersions)
+            for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_WINE)) {
+                if (profile.remoteUrl != null) continue
+                wineList.add(ContentsManager.getEntryName(profile))
+            }
+            for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_PROTON)) {
+                if (profile.remoteUrl != null) continue
+                wineList.add(ContentsManager.getEntryName(profile))
+            }
+            if (wineList.isEmpty()) {
+                wineList.add("proton-9.0-x86_64")
+            }
+
+            // 2. DXVK Versions
+            val dxvkList = mutableListOf<String>()
+            val originalItems = context.resources.getStringArray(com.winlator.cmod.R.array.dxvk_version_entries)
+            dxvkList.addAll(originalItems)
+            for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_DXVK)) {
+                if (profile.remoteUrl != null) continue
+                val entryName = ContentsManager.getEntryName(profile)
+                val firstDashIndex = entryName.indexOf('-')
+                if (firstDashIndex != -1) {
+                    dxvkList.add(entryName.substring(firstDashIndex + 1))
+                }
+            }
+            val filteredDxvkList = dxvkList.filter { version ->
+                isArm64EC || !version.lowercase().contains("arm64ec")
+            }
+
+            // 3. VKD3D Versions
+            val vkd3dList = mutableListOf<String>()
+            val originalVkd3dItems = context.resources.getStringArray(com.winlator.cmod.R.array.vkd3d_version_entries)
+            for (version in originalVkd3dItems) {
+                if (isArm64EC || !version.lowercase().contains("arm64ec")) {
+                    vkd3dList.add(version)
+                }
+            }
+            for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_VKD3D)) {
+                if (profile.remoteUrl != null) continue
+                val displayName = profile.verName
+                val versionCode = profile.verCode
+                if (isArm64EC || !displayName.lowercase().contains("arm64ec")) {
+                    vkd3dList.add("$displayName-$versionCode")
+                }
+            }
+
+            // 4. Dynamic Box64 versions
+            val box64Set = mutableSetOf<String>()
+            box64Set.add(if (isArm64EC) DefaultVersion.WOWBOX64 else DefaultVersion.BOX64)
+            if (container != null && container.getBox64Version() != null && container.getBox64Version().isNotEmpty()) {
+                box64Set.add(container.getBox64Version())
+            }
+            val type = if (isArm64EC) ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64 else ContentProfile.ContentType.CONTENT_TYPE_BOX64
+            for (profile in contentsManager.getProfiles(type)) {
+                if (profile.remoteUrl != null) continue
+                val entryName = ContentsManager.getEntryName(profile)
+                val dashIdx = entryName.indexOf('-')
+                if (dashIdx != -1) {
+                    box64Set.add(entryName.substring(dashIdx + 1))
+                }
+            }
+            val box64List = box64Set.toList()
+
+            // 5. Dynamic FEXCore versions
+            val fexcoreSet = mutableSetOf<String>()
+            fexcoreSet.add(DefaultVersion.FEXCORE)
+            if (container != null && container.getFEXCoreVersion() != null && container.getFEXCoreVersion().isNotEmpty()) {
+                fexcoreSet.add(container.getFEXCoreVersion())
+            }
+            for (profile in contentsManager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_FEXCORE)) {
+                if (profile.remoteUrl != null) continue
+                val entryName = ContentsManager.getEntryName(profile)
+                val dashIdx = entryName.indexOf('-')
+                if (dashIdx != -1) {
+                    fexcoreSet.add(entryName.substring(dashIdx + 1))
+                }
+            }
+            val fexcoreList = fexcoreSet.toList()
+
+            // 6. SoundFonts setup
+            val sfList = mutableListOf<String>()
+            sfList.add("-- Desativado --")
+            sfList.add(MidiManager.DEFAULT_SF2_FILE)
+            val sfDir = MidiManager.getSoundFontDir(context)
+            if (sfDir.exists()) {
+                val files = sfDir.listFiles()
+                if (files != null) {
+                    for (file in files) {
+                        if (file.isFile && file.name.endsWith(".sf2", ignoreCase = true)) {
+                            sfList.add(file.name)
+                        }
                     }
                 }
             }
+
+            // 7. Graphics Driver Versions
+            val gdList = mutableListOf<String>()
+            val defaultVersions = context.resources.getStringArray(com.winlator.cmod.R.array.wrapper_graphics_driver_version_entries)
+            for (version in defaultVersions) {
+                if (GPUInformation.isDriverSupported(version, context)) {
+                    gdList.add(version)
+                }
+            }
+            val adrenotoolsManager = AdrenotoolsManager(context)
+            gdList.addAll(adrenotoolsManager.enumarateInstalledDrivers())
+            if (gdList.isEmpty()) {
+                gdList.add("System")
+            }
+
+            // 8. GPU Names
+            val gpuList = mutableListOf<String>()
+            gpuList.add("Device")
+            try {
+                val gpuNameList = FileUtils.readString(context, "gpu_cards.json")
+                val jarray = JSONArray(gpuNameList)
+                for (i in 0 until jarray.length()) {
+                    val jobj = jarray.getJSONObject(i)
+                    gpuList.add(jobj.getString("name"))
+                }
+            } catch (e: Exception) {}
+
+            withContext(Dispatchers.Main) {
+                wineVersions.clear()
+                wineVersions.addAll(wineList)
+                if (container == null && wineList.isNotEmpty()) {
+                    wineVersion = wineList.first()
+                }
+
+                dxvkVersions.clear()
+                dxvkVersions.addAll(filteredDxvkList)
+
+                vkd3dVersions.clear()
+                vkd3dVersions.addAll(vkd3dList)
+
+                box64Versions.clear()
+                box64Versions.addAll(box64List)
+                if (box64Version.isEmpty() && box64List.isNotEmpty()) {
+                    box64Version = box64List.first()
+                }
+
+                fexcoreVersions.clear()
+                fexcoreVersions.addAll(fexcoreList)
+                if (fexcoreVersion.isEmpty() && fexcoreList.isNotEmpty()) {
+                    fexcoreVersion = fexcoreList.first()
+                }
+
+                soundFontOptions.clear()
+                soundFontOptions.addAll(sfList)
+
+                graphicsDriverVersions.clear()
+                graphicsDriverVersions.addAll(gdList)
+
+                gpuNames.clear()
+                gpuNames.addAll(gpuList)
+
+                isDataLoaded = true
+            }
         }
-        list
+    }
+
+    if (!isDataLoaded) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            // Keep screen blank to avoid flickering and layout jumps
+        }
+        return
     }
 
     Column(
@@ -1433,7 +1480,8 @@ private fun formatCpuList(cpuList: List<Boolean>): String {
 // Helper methods for parsing wincomponents
 private fun parseWinComponents(winCompStr: String): Map<String, Int> {
     val map = mutableMapOf<String, Int>()
-    winCompStr.split(";").forEach {
+    val separator = if (winCompStr.contains(",")) "," else ";"
+    winCompStr.split(separator).forEach {
         val parts = it.split("=")
         if (parts.size == 2) {
             map[parts[0]] = parts[1].toIntOrNull() ?: 1
@@ -1443,7 +1491,7 @@ private fun parseWinComponents(winCompStr: String): Map<String, Int> {
 }
 
 private fun formatWinComponents(map: Map<String, Int>): String {
-    return map.entries.joinToString(";") { "${it.key}=${it.value}" }
+    return map.entries.joinToString(",") { "${it.key}=${it.value}" }
 }
 
 // Helper methods for parsing drives

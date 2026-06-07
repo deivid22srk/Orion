@@ -27,27 +27,49 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import com.winlator.cmod.container.ContainerManager
 import com.winlator.cmod.container.Shortcut
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ShortcutsScreen(
     containerManager: ContainerManager,
     onStartShortcut: (Shortcut) -> Unit
 ) {
-    val shortcuts = remember {
-        mutableStateListOf<Shortcut>().apply {
-            addAll(containerManager.loadShortcuts())
+    val shortcuts = remember { mutableStateListOf<Shortcut>() }
+    var isLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val loaded = withContext(Dispatchers.IO) {
+            containerManager.loadShortcuts()
         }
+        shortcuts.clear()
+        shortcuts.addAll(loaded)
+        isLoading = false
     }
 
-    if (shortcuts.isEmpty()) {
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Empty placeholder to prevent flicker
+        }
+    } else if (shortcuts.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -84,14 +106,18 @@ fun ShortcutsScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(shortcuts) { shortcut ->
+            items(shortcuts, key = { it.file.absolutePath }) { shortcut ->
                 ShortcutGridItem(
                     shortcut = shortcut,
                     onPlay = { onStartShortcut(shortcut) },
                     onDelete = {
-                        // Delete desktop shortcut file
-                        shortcut.file.delete()
-                        shortcuts.remove(shortcut)
+                        scope.launch(Dispatchers.IO) {
+                            // Delete desktop shortcut file
+                            shortcut.file.delete()
+                            withContext(Dispatchers.Main) {
+                                shortcuts.remove(shortcut)
+                            }
+                        }
                     }
                 )
             }
