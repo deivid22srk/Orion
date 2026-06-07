@@ -26,6 +26,12 @@ import com.winlator.cmod.core.WineInfo
 import com.winlator.cmod.core.WineThemeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 
 enum class SettingsScreenType {
     MAIN,
@@ -79,15 +85,32 @@ fun SettingsScreen() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (currentScreen) {
-                SettingsScreenType.MAIN -> SettingsMainScreen(onNavigate = { currentScreen = it })
-                SettingsScreenType.GENERAL -> GeneralSettingsScreen(prefs)
-                SettingsScreenType.GRAPHICS -> GraphicsSettingsScreen(prefs)
-                SettingsScreenType.AUDIO -> AudioSettingsScreen(prefs)
-                SettingsScreenType.SYSTEM -> SystemSettingsScreen(prefs)
-                SettingsScreenType.ENV_VARS -> EnvVarsSettingsScreen(prefs)
-                SettingsScreenType.WIN_COMPONENTS -> WinComponentsSettingsScreen(prefs)
-                SettingsScreenType.DRIVES -> DrivesSettingsScreen(prefs)
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    if (targetState == SettingsScreenType.MAIN) {
+                        (slideInHorizontally { width -> -width / 2 } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> width / 2 } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> width / 2 } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> -width / 2 } + fadeOut())
+                    }
+                },
+                label = "settings_subscreen_transition",
+                modifier = Modifier.fillMaxSize()
+            ) { screen ->
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (screen) {
+                        SettingsScreenType.MAIN -> SettingsMainScreen(onNavigate = { currentScreen = it })
+                        SettingsScreenType.GENERAL -> GeneralSettingsScreen(prefs)
+                        SettingsScreenType.GRAPHICS -> GraphicsSettingsScreen(prefs)
+                        SettingsScreenType.AUDIO -> AudioSettingsScreen(prefs)
+                        SettingsScreenType.SYSTEM -> SystemSettingsScreen(prefs)
+                        SettingsScreenType.ENV_VARS -> EnvVarsSettingsScreen(prefs)
+                        SettingsScreenType.WIN_COMPONENTS -> WinComponentsSettingsScreen(prefs)
+                        SettingsScreenType.DRIVES -> DrivesSettingsScreen(prefs)
+                    }
+                }
             }
         }
     }

@@ -1,7 +1,9 @@
 package com.winlator.cmod.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +46,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShortcutsScreen(
     containerManager: ContainerManager,
@@ -67,7 +70,7 @@ fun ShortcutsScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Empty placeholder to prevent flicker
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else if (shortcuts.isEmpty()) {
         Box(
@@ -107,19 +110,21 @@ fun ShortcutsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(shortcuts, key = { it.file.absolutePath }) { shortcut ->
-                ShortcutGridItem(
-                    shortcut = shortcut,
-                    onPlay = { onStartShortcut(shortcut) },
-                    onDelete = {
-                        scope.launch(Dispatchers.IO) {
-                            // Delete desktop shortcut file
-                            shortcut.file.delete()
-                            withContext(Dispatchers.Main) {
-                                shortcuts.remove(shortcut)
+                Box(modifier = Modifier.animateItemPlacement()) {
+                    ShortcutGridItem(
+                        shortcut = shortcut,
+                        onPlay = { onStartShortcut(shortcut) },
+                        onDelete = {
+                            scope.launch(Dispatchers.IO) {
+                                // Delete desktop shortcut file
+                                shortcut.file.delete()
+                                withContext(Dispatchers.Main) {
+                                    shortcuts.remove(shortcut)
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

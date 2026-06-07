@@ -3,6 +3,7 @@ package com.winlator.cmod.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,7 @@ import kotlinx.coroutines.withContext
 import com.winlator.cmod.container.Container
 import com.winlator.cmod.container.ContainerManager
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContainersScreen(
     containerManager: ContainerManager,
@@ -134,16 +135,18 @@ fun ContainersScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(containers, key = { it.id }) { container ->
-                        ContainerCard(
-                            container = container,
-                            onStart = { onStartContainer(container) },
-                            onEdit = { selectedContainerForEdit = container },
-                            onDelete = {
-                                containerManager.removeContainerAsync(container) {
-                                    containers.remove(container)
+                        Box(modifier = Modifier.animateItemPlacement()) {
+                            ContainerCard(
+                                container = container,
+                                onStart = { onStartContainer(container) },
+                                onEdit = { selectedContainerForEdit = container },
+                                onDelete = {
+                                    containerManager.removeContainerAsync(container) {
+                                        containers.remove(container)
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
