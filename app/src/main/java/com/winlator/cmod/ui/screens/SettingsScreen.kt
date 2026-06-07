@@ -503,7 +503,7 @@ fun SystemSettingsScreen(prefs: SharedPreferences) {
         val selectedStartupLabel = when (startupSelection) {
             Container.STARTUP_SELECTION_ESSENTIAL.toInt() -> "Essencial"
             Container.STARTUP_SELECTION_NORMAL.toInt() -> "Normal"
-            Container.STARTUP_SELECTION_FULL.toInt() -> "Completo"
+            Container.STARTUP_SELECTION_AGGRESSIVE.toInt() -> "Completo"
             else -> "Essencial"
         }
         SettingsDropdown(
@@ -514,7 +514,7 @@ fun SystemSettingsScreen(prefs: SharedPreferences) {
                 val code = when (label) {
                     "Essencial" -> Container.STARTUP_SELECTION_ESSENTIAL.toInt()
                     "Normal" -> Container.STARTUP_SELECTION_NORMAL.toInt()
-                    "Completo" -> Container.STARTUP_SELECTION_FULL.toInt()
+                    "Completo" -> Container.STARTUP_SELECTION_AGGRESSIVE.toInt()
                     else -> Container.STARTUP_SELECTION_ESSENTIAL.toInt()
                 }
                 startupSelection = code
